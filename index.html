@@ -1132,29 +1132,37 @@ function getAutoTemplates() {
     const mk = new Set(quickAddTemplates.map(t=>`${t.category}|||${t.name}`.toLowerCase()));
     return Object.values(auto).filter(a=>!mk.has(`${a.category}|||${a.name}`.toLowerCase())).sort((a,b)=>a.name.localeCompare(b.name));
 }
-
 function renderAutoTemplates() {
     const section=document.getElementById('autoTemplatesSection'), list=document.getElementById('autoTemplatesList');
     const autos=getAutoTemplates();
     if (!autos.length) { section.classList.add('hidden'); return; }
     section.classList.remove('hidden');
     list.innerHTML=autos.map((t,i)=>`<button class="template-pill ${CAT_PILL[t.category]||'pill-bill'}" data-auto-idx="${i}">${t.name} <span style="opacity:0.6;margin-left:0.3rem;">€${Math.abs(t.amount).toFixed(2)}</span></button>`).join('');
-    // Store auto templates on the element so event delegation can retrieve them
     list._autos = autos;
+
+    let touchStartX = 0, touchStartY = 0;
+    list.ontouchstart = e => { touchStartX = e.touches[0].clientX; touchStartY = e.touches[0].clientY; };
+    list.ontouchend = e => {
+        const dx = Math.abs(e.changedTouches[0].clientX - touchStartX);
+        const dy = Math.abs(e.changedTouches[0].clientY - touchStartY);
+        if (dx > 10 || dy > 10) return;
+        const btn = e.target.closest('[data-auto-idx]');
+        if (!btn) return;
+        e.preventDefault();
+        const t = list._autos[parseInt(btn.dataset.autoIdx)];
+        if (!t) return;
+        prefillAuto(t.name, t.category, Math.abs(t.amount));
+    };
     list.onclick = e => {
         const btn = e.target.closest('[data-auto-idx]');
         if (!btn) return;
         const t = list._autos[parseInt(btn.dataset.autoIdx)];
         if (!t) return;
-        // Capture values before switchTab triggers a re-render
-        const name = t.name, category = t.category, amount = Math.abs(t.amount);
-        prefillAuto(name, category, amount);
+        prefillAuto(t.name, t.category, Math.abs(t.amount));
     };
 }
 
 function prefillAuto(name, category, amount) {
-    // Populate fields first, then switch tab — avoids the re-render from
-    // switchTab('add') → renderQuickAdd() clobbering a still-propagating click
     document.getElementById('transactionDate').valueAsDate=new Date();
     document.getElementById('transactionCategory').value=category;
     document.getElementById('transactionAmount').value=amount;
@@ -1167,13 +1175,22 @@ function renderSavedTemplates() {
     const hasAuto=getAutoTemplates().length>0;
     if (!quickAddTemplates.length) { section.classList.add('hidden'); noMsg&&(hasAuto?noMsg.classList.add('hidden'):noMsg.classList.remove('hidden')); return; }
     section.classList.remove('hidden'); noMsg?.classList.add('hidden');
-    // Use data-id attributes instead of inline onclick strings to avoid float ID precision issues
     list.innerHTML=quickAddTemplates.map(t=>`<div style="display:flex;align-items:center;gap:0.25rem;">
         <button class="template-pill ${CAT_PILL[t.category]||'pill-bill'}" data-template-id="${t.id}">${t.name} <span style="opacity:0.6;margin-left:0.3rem;">€${Math.abs(t.amount).toFixed(2)}</span></button>
         <button class="delete-template-btn" data-delete-id="${t.id}" style="background:none;border:none;cursor:pointer;color:var(--muted);width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:50%;">✕</button>
     </div>`).join('');
 
-    // Wire clicks via event delegation on the list container
+    let txStart = 0, tyStart = 0;
+    list.ontouchstart = e => { txStart = e.touches[0].clientX; tyStart = e.touches[0].clientY; };
+    list.ontouchend = e => {
+        const dx = Math.abs(e.changedTouches[0].clientX - txStart);
+        const dy = Math.abs(e.changedTouches[0].clientY - tyStart);
+        if (dx > 10 || dy > 10) return;
+        const pill = e.target.closest('[data-template-id]');
+        if (pill) { e.preventDefault(); prefillFromTemplate(pill.dataset.templateId); return; }
+        const del = e.target.closest('[data-delete-id]');
+        if (del) { e.preventDefault(); deleteTemplate(del.dataset.deleteId); }
+    };
     list.onclick = e => {
         const pill = e.target.closest('[data-template-id]');
         if (pill) { prefillFromTemplate(pill.dataset.templateId); return; }
@@ -1191,29 +1208,6 @@ function prefillFromTemplate(id) {
     document.getElementById('transactionDescription').value=t.name;
     setTimeout(() => { switchTab('add'); highlightForm(); }, 0);
 }
-
-function highlightForm() {
-    const form=document.getElementById('transactionFormFields');
-    form?.classList.add('prefill-highlight');
-    setTimeout(()=>form?.classList.remove('prefill-highlight'),1500);
-    document.getElementById('transactionAmount').focus();
-}
-
-function saveTemplate() {
-    const name=document.getElementById('templateName').value.trim(), category=document.getElementById('templateCategory').value, amount=parseFloat(document.getElementById('templateAmount').value);
-    if (!name) { alert('Please enter a template name'); return; }
-    if (!amount||amount<=0) { alert('Please enter a valid amount'); return; }
-    if (quickAddTemplates.some(t=>t.name.toLowerCase()===name.toLowerCase()&&t.category===category)) { alert('Template already exists'); return; }
-    quickAddTemplates.push({ id: String(Date.now()), name, category, amount: category!=='Income'?-Math.abs(amount):Math.abs(amount) });
-    saveTemplates(); renderQuickAdd();
-    document.getElementById('templateName').value=''; document.getElementById('templateAmount').value='';
-}
-
-function deleteTemplate(id) {
-    const t=quickAddTemplates.find(tpl=>String(tpl.id)===String(id));
-    if (t&&confirm(`Remove template "${t.name}"?`)) { quickAddTemplates=quickAddTemplates.filter(tpl=>String(tpl.id)!==String(id)); saveTemplates(); renderQuickAdd(); }
-}
-
 // ══════════════════════════════════════════════════
 // NOTE FIELD (collapsible)
 // ══════════════════════════════════════════════════
