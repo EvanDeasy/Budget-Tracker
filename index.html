@@ -1138,16 +1138,28 @@ function renderAutoTemplates() {
     const autos=getAutoTemplates();
     if (!autos.length) { section.classList.add('hidden'); return; }
     section.classList.remove('hidden');
-    list.innerHTML=autos.map(t=>`<button class="template-pill ${CAT_PILL[t.category]||'pill-bill'}" onclick="prefillAuto(${JSON.stringify(t.name)},'${t.category}',${Math.abs(t.amount)})">${t.name} <span style="opacity:0.6;margin-left:0.3rem;">€${Math.abs(t.amount).toFixed(2)}</span></button>`).join('');
+    list.innerHTML=autos.map((t,i)=>`<button class="template-pill ${CAT_PILL[t.category]||'pill-bill'}" data-auto-idx="${i}">${t.name} <span style="opacity:0.6;margin-left:0.3rem;">€${Math.abs(t.amount).toFixed(2)}</span></button>`).join('');
+    // Store auto templates on the element so event delegation can retrieve them
+    list._autos = autos;
+    list.onclick = e => {
+        const btn = e.target.closest('[data-auto-idx]');
+        if (!btn) return;
+        const t = list._autos[parseInt(btn.dataset.autoIdx)];
+        if (!t) return;
+        // Capture values before switchTab triggers a re-render
+        const name = t.name, category = t.category, amount = Math.abs(t.amount);
+        prefillAuto(name, category, amount);
+    };
 }
 
 function prefillAuto(name, category, amount) {
-    switchTab('add');
+    // Populate fields first, then switch tab — avoids the re-render from
+    // switchTab('add') → renderQuickAdd() clobbering a still-propagating click
     document.getElementById('transactionDate').valueAsDate=new Date();
     document.getElementById('transactionCategory').value=category;
     document.getElementById('transactionAmount').value=amount;
     document.getElementById('transactionDescription').value=name;
-    highlightForm();
+    setTimeout(() => { switchTab('add'); highlightForm(); }, 0);
 }
 
 function renderSavedTemplates() {
@@ -1173,12 +1185,11 @@ function renderSavedTemplates() {
 function prefillFromTemplate(id) {
     const t=quickAddTemplates.find(tpl=>String(tpl.id)===String(id));
     if(!t) return;
-    switchTab('add');
     document.getElementById('transactionDate').valueAsDate=new Date();
     document.getElementById('transactionCategory').value=t.category;
     document.getElementById('transactionAmount').value=Math.abs(t.amount);
     document.getElementById('transactionDescription').value=t.name;
-    highlightForm();
+    setTimeout(() => { switchTab('add'); highlightForm(); }, 0);
 }
 
 function highlightForm() {
