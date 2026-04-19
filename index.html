@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <!-- ── Version stamp — increment this (e.g. v11, v12) every time you push an update ── -->
-    <meta name="app-version" content="v11">
+    <meta name="app-version" content="v12">
     <!-- ── No-cache headers — tells browsers not to serve a stale cached copy ── -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
@@ -708,7 +708,7 @@ textarea.field-input { height: auto; padding: 0.75rem 0.875rem; resize: none; li
 
 <script>
 // ── Version — must match the <meta name="app-version"> tag above ──
-const APP_VERSION = 'v11';
+const APP_VERSION = 'v12';
 
 // ══════════════════════════════════════════════════
 // STATE
@@ -1100,7 +1100,11 @@ function prefillRecurring(name, category, amount) {
 // ══════════════════════════════════════════════════
 function loadTemplates() {
     const t = localStorage.getItem('budgetQuickAddTemplates');
-    if (t) { quickAddTemplates=JSON.parse(t); quickAddTemplates.forEach(t=>{if(!t.id)t.id=Date.now()+Math.random();}); }
+    if (t) {
+        quickAddTemplates=JSON.parse(t);
+        // Migrate any float IDs to strings for reliable data-attribute matching
+        quickAddTemplates.forEach(t=>{ t.id = String(t.id || Date.now()); });
+    }
 }
 function saveTemplates() { localStorage.setItem('budgetQuickAddTemplates', JSON.stringify(quickAddTemplates)); }
 
@@ -1151,14 +1155,24 @@ function renderSavedTemplates() {
     const hasAuto=getAutoTemplates().length>0;
     if (!quickAddTemplates.length) { section.classList.add('hidden'); noMsg&&(hasAuto?noMsg.classList.add('hidden'):noMsg.classList.remove('hidden')); return; }
     section.classList.remove('hidden'); noMsg?.classList.add('hidden');
+    // Use data-id attributes instead of inline onclick strings to avoid float ID precision issues
     list.innerHTML=quickAddTemplates.map(t=>`<div style="display:flex;align-items:center;gap:0.25rem;">
-        <button class="template-pill ${CAT_PILL[t.category]||'pill-bill'}" onclick="prefillFromTemplate('${t.id}')">${t.name} <span style="opacity:0.6;margin-left:0.3rem;">€${Math.abs(t.amount).toFixed(2)}</span></button>
-        <button onclick="deleteTemplate('${t.id}')" style="background:none;border:none;cursor:pointer;color:var(--muted);width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:50%;" onmouseover="this.style.color='#dc2626'" onmouseout="this.style.color='var(--muted)'">✕</button>
+        <button class="template-pill ${CAT_PILL[t.category]||'pill-bill'}" data-template-id="${t.id}">${t.name} <span style="opacity:0.6;margin-left:0.3rem;">€${Math.abs(t.amount).toFixed(2)}</span></button>
+        <button class="delete-template-btn" data-delete-id="${t.id}" style="background:none;border:none;cursor:pointer;color:var(--muted);width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:50%;">✕</button>
     </div>`).join('');
+
+    // Wire clicks via event delegation on the list container
+    list.onclick = e => {
+        const pill = e.target.closest('[data-template-id]');
+        if (pill) { prefillFromTemplate(pill.dataset.templateId); return; }
+        const del = e.target.closest('[data-delete-id]');
+        if (del) { deleteTemplate(del.dataset.deleteId); }
+    };
 }
 
 function prefillFromTemplate(id) {
-    const t=quickAddTemplates.find(tpl=>String(tpl.id)===String(id)); if(!t) return;
+    const t=quickAddTemplates.find(tpl=>String(tpl.id)===String(id));
+    if(!t) return;
     switchTab('add');
     document.getElementById('transactionDate').valueAsDate=new Date();
     document.getElementById('transactionCategory').value=t.category;
@@ -1179,7 +1193,7 @@ function saveTemplate() {
     if (!name) { alert('Please enter a template name'); return; }
     if (!amount||amount<=0) { alert('Please enter a valid amount'); return; }
     if (quickAddTemplates.some(t=>t.name.toLowerCase()===name.toLowerCase()&&t.category===category)) { alert('Template already exists'); return; }
-    quickAddTemplates.push({ id:Date.now()+Math.random(), name, category, amount: category!=='Income'?-Math.abs(amount):Math.abs(amount) });
+    quickAddTemplates.push({ id: String(Date.now()), name, category, amount: category!=='Income'?-Math.abs(amount):Math.abs(amount) });
     saveTemplates(); renderQuickAdd();
     document.getElementById('templateName').value=''; document.getElementById('templateAmount').value='';
 }
