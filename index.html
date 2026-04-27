@@ -1889,26 +1889,39 @@ function renderDailyHero() {
     const remaining  = target - spentThisPeriod;
     const dailyAmt   = remaining / daysLeft;
 
-    // Period label for sub-text
+// What you've spent specifically today
+    const spentToday = transactions
+        .filter(t => t.category==='Discretionary' && t.date === todayStr)
+        .reduce((s,t) => s + Math.abs(t.amount), 0);
+
+    // Daily allowance = remaining period budget spread over days left
+    const dailyAllowance = dailyAmt; // already calculated above
+    // Left today = allowance minus already spent today
+    const leftToday = dailyAllowance - spentToday;
+
     const fmt = d => d.toLocaleDateString('en-IE', { day:'numeric', month:'short' });
     const periodLabel = hasPayPeriodData()
         ? `${fmt(periodStart)} – ${fmt(periodEnd)}`
         : 'this month';
 
     const pct       = spentThisPeriod / target;
-    const heroClass = pct >= 1 ? 'hero-over' : pct >= 0.8 ? 'hero-warn' : 'hero-ok';
-    const sign      = dailyAmt < 0 ? '−' : '';
-    const display   = `${sign}€${Math.abs(dailyAmt).toFixed(2)}`;
+    const todayPct  = dailyAllowance > 0 ? spentToday / dailyAllowance : 0;
+    const heroClass = leftToday < 0 ? 'hero-over' : todayPct >= 0.8 ? 'hero-warn' : 'hero-ok';
+    const sign      = leftToday < 0 ? '−' : '';
+    const display   = `${sign}€${Math.abs(leftToday).toFixed(2)}`;
 
     container.innerHTML = `<div class="daily-hero ${heroClass}">
         <div class="hero-left">
             <div class="hero-label">Left to spend today</div>
             <div class="hero-amount">${display}</div>
-            <div class="hero-sub">€${spentThisPeriod.toFixed(0)} of €${target.toFixed(0)} used ${periodLabel}</div>
+            <div class="hero-sub">
+                €${spentToday.toFixed(2)} spent today · €${dailyAllowance.toFixed(2)} daily allowance<br>
+                €${spentThisPeriod.toFixed(0)} of €${target.toFixed(0)} used ${periodLabel}
+            </div>
         </div>
         <div class="hero-right">
             <div class="hero-days">${daysLeft} day${daysLeft!==1?'s':''} left</div>
-            <div style="font-size:0.75rem;opacity:0.8;margin-top:0.25rem;">${Math.round(pct*100)}% used</div>
+            <div style="font-size:0.75rem;opacity:0.8;margin-top:0.25rem;">${Math.round(pct*100)}% period used</div>
         </div>
     </div>`;
 }
