@@ -1876,6 +1876,7 @@ function renderDailyHero() {
     }
 
     const now = new Date(); now.setHours(0,0,0,0);
+    const todayStr = now.toISOString().split('T')[0];
     const { start: periodStart, end: periodEnd } = getPayPeriod();
     const periodStartStr = periodStart.toISOString().split('T')[0];
     const periodEndStr   = periodEnd.toISOString().split('T')[0];
