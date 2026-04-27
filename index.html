@@ -4,8 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <!-- ── Version stamp — increment this (e.g. v11, v12) every time you push an update ── -->
-    <meta name="app-version" content="v12">
-    <!-- ── No-cache headers — tells browsers not to serve a stale cached copy ── -->
+    <meta name="app-version" content="v14">    <!-- ── No-cache headers — tells browsers not to serve a stale cached copy ── -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -708,7 +707,7 @@ textarea.field-input { height: auto; padding: 0.75rem 0.875rem; resize: none; li
 
 <script>
 // ── Version — must match the <meta name="app-version"> tag above ──
-const APP_VERSION = 'v12';
+const APP_VERSION = 'v14';
 
 // ══════════════════════════════════════════════════
 // STATE
@@ -1132,6 +1131,7 @@ function getAutoTemplates() {
     const mk = new Set(quickAddTemplates.map(t=>`${t.category}|||${t.name}`.toLowerCase()));
     return Object.values(auto).filter(a=>!mk.has(`${a.category}|||${a.name}`.toLowerCase())).sort((a,b)=>a.name.localeCompare(b.name));
 }
+
 function renderAutoTemplates() {
     const section=document.getElementById('autoTemplatesSection'), list=document.getElementById('autoTemplatesList');
     const autos=getAutoTemplates();
@@ -1140,12 +1140,14 @@ function renderAutoTemplates() {
     list.innerHTML=autos.map((t,i)=>`<button class="template-pill ${CAT_PILL[t.category]||'pill-bill'}" data-auto-idx="${i}">${t.name} <span style="opacity:0.6;margin-left:0.3rem;">€${Math.abs(t.amount).toFixed(2)}</span></button>`).join('');
     list._autos = autos;
 
+    // Use touchend + scroll-distance guard so iOS scroll container doesn't swallow taps.
+    // Also keep onclick as fallback for desktop/mouse.
     let touchStartX = 0, touchStartY = 0;
     list.ontouchstart = e => { touchStartX = e.touches[0].clientX; touchStartY = e.touches[0].clientY; };
     list.ontouchend = e => {
         const dx = Math.abs(e.changedTouches[0].clientX - touchStartX);
         const dy = Math.abs(e.changedTouches[0].clientY - touchStartY);
-        if (dx > 10 || dy > 10) return;
+        if (dx > 10 || dy > 10) return; // was a scroll, not a tap
         const btn = e.target.closest('[data-auto-idx]');
         if (!btn) return;
         e.preventDefault();
@@ -1163,6 +1165,8 @@ function renderAutoTemplates() {
 }
 
 function prefillAuto(name, category, amount) {
+    // Populate fields first, then switch tab — avoids the re-render from
+    // switchTab('add') → renderQuickAdd() clobbering a still-propagating click
     document.getElementById('transactionDate').valueAsDate=new Date();
     document.getElementById('transactionCategory').value=category;
     document.getElementById('transactionAmount').value=amount;
@@ -1175,11 +1179,13 @@ function renderSavedTemplates() {
     const hasAuto=getAutoTemplates().length>0;
     if (!quickAddTemplates.length) { section.classList.add('hidden'); noMsg&&(hasAuto?noMsg.classList.add('hidden'):noMsg.classList.remove('hidden')); return; }
     section.classList.remove('hidden'); noMsg?.classList.add('hidden');
+    // Use data-id attributes instead of inline onclick strings to avoid float ID precision issues
     list.innerHTML=quickAddTemplates.map(t=>`<div style="display:flex;align-items:center;gap:0.25rem;">
         <button class="template-pill ${CAT_PILL[t.category]||'pill-bill'}" data-template-id="${t.id}">${t.name} <span style="opacity:0.6;margin-left:0.3rem;">€${Math.abs(t.amount).toFixed(2)}</span></button>
         <button class="delete-template-btn" data-delete-id="${t.id}" style="background:none;border:none;cursor:pointer;color:var(--muted);width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:50%;">✕</button>
     </div>`).join('');
 
+    // Wire clicks via touchend (scroll guard) + onclick fallback
     let txStart = 0, tyStart = 0;
     list.ontouchstart = e => { txStart = e.touches[0].clientX; tyStart = e.touches[0].clientY; };
     list.ontouchend = e => {
@@ -1208,6 +1214,29 @@ function prefillFromTemplate(id) {
     document.getElementById('transactionDescription').value=t.name;
     setTimeout(() => { switchTab('add'); highlightForm(); }, 0);
 }
+
+function highlightForm() {
+    const form=document.getElementById('transactionFormFields');
+    form?.classList.add('prefill-highlight');
+    setTimeout(()=>form?.classList.remove('prefill-highlight'),1500);
+    document.getElementById('transactionAmount').focus();
+}
+
+function saveTemplate() {
+    const name=document.getElementById('templateName').value.trim(), category=document.getElementById('templateCategory').value, amount=parseFloat(document.getElementById('templateAmount').value);
+    if (!name) { alert('Please enter a template name'); return; }
+    if (!amount||amount<=0) { alert('Please enter a valid amount'); return; }
+    if (quickAddTemplates.some(t=>t.name.toLowerCase()===name.toLowerCase()&&t.category===category)) { alert('Template already exists'); return; }
+    quickAddTemplates.push({ id: String(Date.now()), name, category, amount: category!=='Income'?-Math.abs(amount):Math.abs(amount) });
+    saveTemplates(); renderQuickAdd();
+    document.getElementById('templateName').value=''; document.getElementById('templateAmount').value='';
+}
+
+function deleteTemplate(id) {
+    const t=quickAddTemplates.find(tpl=>String(tpl.id)===String(id));
+    if (t&&confirm(`Remove template "${t.name}"?`)) { quickAddTemplates=quickAddTemplates.filter(tpl=>String(tpl.id)!==String(id)); saveTemplates(); renderQuickAdd(); }
+}
+
 // ══════════════════════════════════════════════════
 // NOTE FIELD (collapsible)
 // ══════════════════════════════════════════════════
@@ -1885,20 +1914,15 @@ function renderDailyHero() {
         .filter(t => t.category==='Discretionary' && t.date >= periodStartStr && t.date <= periodEndStr)
         .reduce((s,t) => s + Math.abs(t.amount), 0);
 
-    const msPerDay   = 86400000;
-    const daysLeft   = Math.max(1, Math.ceil((periodEnd - now) / msPerDay) + 1);
-    const remaining  = target - spentThisPeriod;
-    const dailyAmt   = remaining / daysLeft;
-
-// What you've spent specifically today
     const spentToday = transactions
         .filter(t => t.category==='Discretionary' && t.date === todayStr)
         .reduce((s,t) => s + Math.abs(t.amount), 0);
 
-    // Daily allowance = remaining period budget spread over days left
-    const dailyAllowance = dailyAmt; // already calculated above
-    // Left today = allowance minus already spent today
-    const leftToday = dailyAllowance - spentToday;
+    const msPerDay       = 86400000;
+    const daysLeft       = Math.max(1, Math.ceil((periodEnd - now) / msPerDay) + 1);
+    const remaining      = target - spentThisPeriod;
+    const dailyAllowance = remaining / daysLeft;
+    const leftToday      = dailyAllowance - spentToday;
 
     const fmt = d => d.toLocaleDateString('en-IE', { day:'numeric', month:'short' });
     const periodLabel = hasPayPeriodData()
