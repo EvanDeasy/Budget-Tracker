@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <!-- ── Version stamp — increment this (e.g. v11, v12) every time you push an update ── -->
-    <meta name="app-version" content="v15">    <!-- ── No-cache headers — tells browsers not to serve a stale cached copy ── -->
+    <meta name="app-version" content="v18">    <!-- ── No-cache headers — tells browsers not to serve a stale cached copy ── -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -350,6 +350,57 @@ textarea.field-input { height: auto; padding: 0.75rem 0.875rem; resize: none; li
 .history-filters { display:flex; gap:0.5rem; flex-direction:column; }
 .date-row { display:flex; gap:0.5rem; }
 .date-row .field-group { flex:1; }
+
+/* ── Bank import review screen ── */
+.import-overlay {
+    position:fixed; inset:0; background:var(--bg); z-index:150;
+    display:flex; flex-direction:column; overflow:hidden;
+}
+.import-header {
+    background:var(--surface); border-bottom:1px solid var(--border);
+    padding:1rem 1.25rem; display:flex; align-items:center; gap:0.75rem;
+    padding-top:calc(1rem + env(safe-area-inset-top));
+}
+.import-header h2 { font-size:1rem; font-weight:700; flex:1; }
+.import-body { flex:1; overflow-y:auto; padding:0.875rem; }
+.import-footer {
+    background:var(--surface); border-top:1px solid var(--border);
+    padding:1rem 1.25rem; display:flex; gap:0.625rem; align-items:center;
+    padding-bottom:calc(1rem + env(safe-area-inset-bottom));
+}
+.import-row {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:0.75rem; padding:0.875rem; margin-bottom:0.625rem;
+    transition:opacity 0.2s;
+}
+.import-row.skipped { opacity:0.4; }
+.import-row-top { display:flex; align-items:flex-start; gap:0.625rem; margin-bottom:0.625rem; }
+.import-row-desc { flex:1; min-width:0; }
+.import-desc-text { font-size:0.875rem; font-weight:600; color:var(--text); word-break:break-word; }
+.import-meta { font-size:0.75rem; color:var(--muted); margin-top:0.125rem; }
+.import-amount { font-family:'DM Mono',monospace; font-size:0.9375rem; font-weight:600; flex-shrink:0; }
+.import-row-controls { display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; }
+.import-row-controls select { flex:1; min-width:130px; height:38px; font-size:0.8125rem; }
+.import-row-controls input { flex:1; min-width:100px; height:38px; font-size:0.8125rem; padding:0 0.625rem; }
+.confidence-dot {
+    width:8px; height:8px; border-radius:50%; flex-shrink:0; margin-top:4px;
+}
+.conf-high   { background:#16a34a; }
+.conf-medium { background:#f59e0b; }
+.conf-low    { background:#dc2626; }
+.skip-btn {
+    width:36px; height:36px; border-radius:8px; border:1.5px solid var(--border);
+    background:var(--bg); cursor:pointer; color:var(--muted); font-size:1rem;
+    display:flex; align-items:center; justify-content:center; transition:all 0.15s; flex-shrink:0;
+}
+.skip-btn:hover { background:#fef2f2; color:var(--bill); border-color:#fecaca; }
+.skip-btn.skipped { background:#fef2f2; color:var(--bill); border-color:#fecaca; }
+.import-progress { font-size:0.8125rem; color:var(--muted); flex:1; }
+.import-bank-badge {
+    display:inline-flex; align-items:center; gap:0.375rem; padding:0.25rem 0.625rem;
+    border-radius:999px; font-size:0.6875rem; font-weight:700; text-transform:uppercase;
+    letter-spacing:0.05em; background:var(--bg); color:var(--muted); border:1px solid var(--border);
+}
 </style>
 </head>
 <body>
@@ -561,7 +612,8 @@ textarea.field-input { height: auto; padding: 0.75rem 0.875rem; resize: none; li
                 <button onclick="clearFilters()" class="btn btn-secondary btn-sm" style="height:40px;">Clear Filters</button>
                 <button onclick="exportCSV()" class="btn btn-sm" style="height:40px;background:#16a34a;color:#fff;">Export CSV ↓</button>
                 <label class="btn btn-sm" style="height:40px;background:var(--accent);color:#fff;cursor:pointer;">
-                    Import CSV ↑<input type="file" accept=".csv" onchange="importCSV(event)" class="hidden">
+                    📄 Import Statement
+                    <input type="file" accept=".pdf,.csv" onchange="handleStatementUpload(event)" class="hidden">
                 </label>
             </div>
         </div>
@@ -584,6 +636,26 @@ textarea.field-input { height: auto; padding: 0.75rem 0.875rem; resize: none; li
     </div>
 
 </div><!-- end #app -->
+
+<!-- ══ BANK IMPORT REVIEW OVERLAY ══ -->
+<div id="importOverlay" class="import-overlay hidden">
+    <div class="import-header">
+        <button onclick="closeImportOverlay()" class="modal-close" style="margin-right:0.25rem;">✕</button>
+        <div>
+            <h2 id="importTitle">Review Transactions</h2>
+            <div id="importBankBadge" class="import-bank-badge" style="margin-top:0.25rem;"></div>
+        </div>
+    </div>
+    <div class="import-body" id="importBody">
+        <!-- Rows rendered by JS -->
+    </div>
+    <div class="import-footer">
+        <div class="import-progress" id="importProgress"></div>
+        <button onclick="confirmImport()" class="btn btn-primary btn-sm" style="height:40px;">
+            Import Selected
+        </button>
+    </div>
+</div>
 
 <!-- ── Bottom nav — 4 tabs ── -->
 <nav class="bottom-nav">
@@ -707,10 +779,21 @@ textarea.field-input { height: auto; padding: 0.75rem 0.875rem; resize: none; li
 
 <script>
 // ── Version — must match the <meta name="app-version"> tag above ──
-const APP_VERSION = 'v15';
+const APP_VERSION = 'v18';
 
 // ── Local date helper — avoids UTC offset shifting date by a day ──
 const localDateStr = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+
+// ── HTML escape — prevents XSS from user input and imported bank data ──
+const escapeHtml = s => String(s ?? '').replace(/[&<>"']/g, c => (
+    { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]
+));
+
+// ── Regex escape — for safely building dynamic regex from user input ──
+const escapeRegex = s => String(s ?? '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+// ── ID generator — UUIDs avoid float-precision issues with Date.now()+Math.random() ──
+const newId = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(36).slice(2));
 
 // ══════════════════════════════════════════════════
 // STATE
@@ -1081,7 +1164,7 @@ function detectRecurring() {
             <div style="padding:1rem 1.25rem;display:flex;flex-wrap:wrap;gap:0.5rem;">
                 ${suggestions.slice(0,8).map(s =>
                     `<button class="template-pill ${CAT_PILL[s.category]||'pill-bill'}" onclick="prefillRecurring(${JSON.stringify(s.name)},'${s.category}',${Math.abs(s.amount)})">
-                        ${s.name} <span style="opacity:0.6;margin-left:0.3rem;">€${Math.abs(s.amount).toFixed(2)}</span>
+                        ${escapeHtml(s.name)} <span style="opacity:0.6;margin-left:0.3rem;">€${Math.abs(s.amount).toFixed(2)}</span>
                     </button>`).join('')}
             </div>
         </div>`;
@@ -1140,7 +1223,7 @@ function renderAutoTemplates() {
     const autos=getAutoTemplates();
     if (!autos.length) { section.classList.add('hidden'); return; }
     section.classList.remove('hidden');
-    list.innerHTML=autos.map((t,i)=>`<button class="template-pill ${CAT_PILL[t.category]||'pill-bill'}" data-auto-idx="${i}">${t.name} <span style="opacity:0.6;margin-left:0.3rem;">€${Math.abs(t.amount).toFixed(2)}</span></button>`).join('');
+    list.innerHTML=autos.map((t,i)=>`<button class="template-pill ${CAT_PILL[t.category]||'pill-bill'}" data-auto-idx="${i}">${escapeHtml(t.name)} <span style="opacity:0.6;margin-left:0.3rem;">€${Math.abs(t.amount).toFixed(2)}</span></button>`).join('');
     list._autos = autos;
 
     // Use touchend + scroll-distance guard so iOS scroll container doesn't swallow taps.
@@ -1184,7 +1267,7 @@ function renderSavedTemplates() {
     section.classList.remove('hidden'); noMsg?.classList.add('hidden');
     // Use data-id attributes instead of inline onclick strings to avoid float ID precision issues
     list.innerHTML=quickAddTemplates.map(t=>`<div style="display:flex;align-items:center;gap:0.25rem;">
-        <button class="template-pill ${CAT_PILL[t.category]||'pill-bill'}" data-template-id="${t.id}">${t.name} <span style="opacity:0.6;margin-left:0.3rem;">€${Math.abs(t.amount).toFixed(2)}</span></button>
+        <button class="template-pill ${CAT_PILL[t.category]||'pill-bill'}" data-template-id="${t.id}">${escapeHtml(t.name)} <span style="opacity:0.6;margin-left:0.3rem;">€${Math.abs(t.amount).toFixed(2)}</span></button>
         <button class="delete-template-btn" data-delete-id="${t.id}" style="background:none;border:none;cursor:pointer;color:var(--muted);width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:50%;">✕</button>
     </div>`).join('');
 
@@ -1230,7 +1313,7 @@ function saveTemplate() {
     if (!name) { alert('Please enter a template name'); return; }
     if (!amount||amount<=0) { alert('Please enter a valid amount'); return; }
     if (quickAddTemplates.some(t=>t.name.toLowerCase()===name.toLowerCase()&&t.category===category)) { alert('Template already exists'); return; }
-    quickAddTemplates.push({ id: String(Date.now()), name, category, amount: category!=='Income'?-Math.abs(amount):Math.abs(amount) });
+    quickAddTemplates.push({ id: newId(), name, category, amount: category!=='Income'?-Math.abs(amount):Math.abs(amount) });
     saveTemplates(); renderQuickAdd();
     document.getElementById('templateName').value=''; document.getElementById('templateAmount').value='';
 }
@@ -1276,7 +1359,10 @@ function showSuggestions() {
     const suggs=getDescriptionSuggestions(), filtered=query?suggs.filter(s=>s.description.toLowerCase().includes(query)):suggs;
     if (!filtered.length) { list.classList.add('hidden'); return; }
     list.innerHTML=filtered.slice(0,10).map((s,i)=>{
-        const hl=query?s.description.replace(new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi'),'<strong>$1</strong>'):s.description;
+        const safeDesc = escapeHtml(s.description);
+        const hl = query
+            ? safeDesc.replace(new RegExp(`(${escapeRegex(query)})`, 'gi'), '<strong>$1</strong>')
+            : safeDesc;
         const amtHint=category==='Bill'&&s.lastAmount!=null?`<span style="color:var(--muted);font-size:0.75rem;">€${s.lastAmount.toFixed(2)}</span>`:'';
         return `<div class="suggestion-item" onmousedown="selectSuggestionByIdx(${i})">${hl}${amtHint}</div>`;
     }).join('');
@@ -1301,7 +1387,36 @@ document.addEventListener('click', e=>{
 // ══════════════════════════════════════════════════
 function loadTransactions() {
     const s=localStorage.getItem('budgetTransactions');
-    if (s) transactions=JSON.parse(s);
+    if (s) {
+        try {
+            const raw = JSON.parse(s);
+            if (!Array.isArray(raw)) {
+                console.warn('budgetTransactions is not an array, resetting');
+                transactions = [];
+            } else {
+                const VALID_CATS = ['Income','Bill','Loan','Savings','Discretionary','Pension','Investments'];
+                const dateRe = /^\d{4}-\d{2}-\d{2}$/;
+                const valid = [], dropped = [];
+                raw.forEach((t, i) => {
+                    if (!t || typeof t !== 'object') { dropped.push({i, reason:'not an object', t}); return; }
+                    if (!dateRe.test(t.date))                 { dropped.push({i, reason:'bad date', t}); return; }
+                    if (typeof t.amount !== 'number' || !isFinite(t.amount)) { dropped.push({i, reason:'bad amount', t}); return; }
+                    if (!VALID_CATS.includes(t.category))     { dropped.push({i, reason:'bad category', t}); return; }
+                    // Repair missing/optional fields rather than dropping
+                    if (t.id === undefined || t.id === null) t.id = newId();
+                    if (typeof t.description !== 'string')   t.description = String(t.description ?? '');
+                    if (typeof t.note !== 'string')          t.note = '';
+                    if (typeof t.subcat !== 'string')        t.subcat = '';
+                    valid.push(t);
+                });
+                if (dropped.length) console.warn(`Dropped ${dropped.length} invalid transaction(s) on load:`, dropped);
+                transactions = valid;
+            }
+        } catch (err) {
+            console.error('Failed to parse budgetTransactions, keeping in-memory list empty:', err);
+            transactions = [];
+        }
+    }
     renderAll();
 }
 
@@ -1319,9 +1434,9 @@ function addTransaction() {
     const subcat=document.getElementById('transactionSubcat').value.trim();
     if (!date||!amount||amount<=0) { alert('Please fill in date and a valid amount'); return; }
     amount=category!=='Income'?-Math.abs(amount):Math.abs(amount);
-    const tx={ id:editingId||Date.now(), date, category, amount, description:description||category, note, subcat };
+    const tx={ id:editingId||newId(), date, category, amount, description:description||category, note, subcat };
     if (editingId) {
-        const idx=transactions.findIndex(t=>t.id===editingId);
+        const idx=transactions.findIndex(t=>String(t.id)===String(editingId));
         transactions[idx]=tx; editingId=null;
         document.getElementById('addBtn').textContent='Add Transaction';
         document.getElementById('addFormTitle').textContent='Add Transaction';
@@ -1337,7 +1452,7 @@ function addTransaction() {
 }
 
 function editTransaction(id) {
-    const t=transactions.find(t=>t.id===id); if (!t) return;
+    const t=transactions.find(t=>String(t.id)===String(id)); if (!t) return;
     document.getElementById('transactionDate').value=t.date;
     document.getElementById('transactionCategory').value=t.category;
     document.getElementById('transactionAmount').value=Math.abs(t.amount);
@@ -1358,7 +1473,7 @@ function editTransaction(id) {
 
 function deleteTransaction(id) {
     if (confirm('Delete this transaction?')) {
-        transactions=transactions.filter(t=>t.id!==id);
+        transactions=transactions.filter(t=>String(t.id)!==String(id));
         saveTransactions(); renderAll();
     }
 }
@@ -1383,20 +1498,21 @@ function clearForm() {
 // RENDER — transaction row HTML
 // ══════════════════════════════════════════════════
 function txRowHTML(t, editGoesTo) {
-    const editFn = editGoesTo ? `editTransaction(${t.id})` : `editTransaction(${t.id})`;
+    const safeId = String(t.id).replace(/'/g, "\\'");
+    const editFn = `editTransaction('${safeId}')`;
     return `<div class="tx-row">
         <div class="tx-icon" style="background:${CAT_BG[t.category]};">${CAT_ICON[t.category]}</div>
         <div style="flex:1;min-width:0;">
-            <div class="tx-desc">${t.description}</div>
-            <div class="tx-meta">${new Date(t.date).toLocaleDateString('en-IE')} &nbsp;·&nbsp; <span class="cat-badge cat-${t.category}">${t.category}</span>${t.subcat?`<span class="subcat-badge">${t.subcat}</span>`:''}</div>
-            ${t.note?`<div class="tx-note">📝 ${t.note}</div>`:''}
+            <div class="tx-desc">${escapeHtml(t.description)}</div>
+            <div class="tx-meta">${new Date(t.date).toLocaleDateString('en-IE')} &nbsp;·&nbsp; <span class="cat-badge cat-${t.category}">${t.category}</span>${t.subcat?`<span class="subcat-badge">${escapeHtml(t.subcat)}</span>`:''}</div>
+            ${t.note?`<div class="tx-note">📝 ${escapeHtml(t.note)}</div>`:''}
         </div>
         <div class="tx-amount ${t.amount>=0?'positive':'negative'}">${t.amount>=0?'+':'−'}€${Math.abs(t.amount).toFixed(2)}</div>
         <div class="tx-actions">
             <button class="tx-action-btn edit" onclick="${editFn}" title="Edit">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             </button>
-            <button class="tx-action-btn del" onclick="deleteTransaction(${t.id})" title="Delete">
+            <button class="tx-action-btn del" onclick="deleteTransaction('${safeId}')" title="Delete">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
             </button>
         </div>
@@ -1794,7 +1910,7 @@ function importCSV(event) {
             const [date,category,subcat,description,amount,note]=parts;
             let amt=parseFloat(amount);
             amt=category!=='Income'?-Math.abs(amt):Math.abs(amt);
-            return {id:Date.now()+Math.random(),date,category,subcat:subcat||'',description,amount:amt,note:note||''};
+            return {id:newId(),date,category,subcat:subcat||'',description,amount:amt,note:note||''};
         }).filter(t=>t.date&&t.amount);
         if (imported.length) {
             transactions.push(...imported); transactions.sort((a,b)=>new Date(b.date)-new Date(a.date));
@@ -1806,8 +1922,619 @@ function importCSV(event) {
 }
 
 // ══════════════════════════════════════════════════
-// JSON BACKUP / RESTORE
+// KNOWLEDGE BASE ENGINE
 // ══════════════════════════════════════════════════
+let knowledgeBase = {}; // { normalisedKey: { category, subcat, count, lastUsed } }
+
+function loadKnowledgeBase() {
+    const kb = localStorage.getItem('budgetKnowledgeBase');
+    if (kb) knowledgeBase = JSON.parse(kb);
+}
+
+function saveKnowledgeBase() {
+    localStorage.setItem('budgetKnowledgeBase', JSON.stringify(knowledgeBase));
+}
+
+// Normalise a raw bank description for matching
+function normaliseDesc(desc) {
+    return desc
+        .toUpperCase()
+        .replace(/\b(VISA DEBIT|MASTERCARD|DIRECT DEBIT|STANDING ORDER|FASTER PAYMENT|BANK TRANSFER|REF|TXN|PMT|POS|ATM|WITHDRAWAL|DEPOSIT|CR|DR)\b/g, '')
+        .replace(/\b\d{4,}\b/g, '')   // remove long numbers (account refs, dates)
+        .replace(/[^A-Z\s]/g, '')      // keep only letters and spaces
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+// Learn from a confirmed categorisation
+function learnFromTransaction(rawDesc, category, subcat) {
+    const key = normaliseDesc(rawDesc);
+    if (!key || key.length < 2) return;
+    if (!knowledgeBase[key]) knowledgeBase[key] = { category, subcat, count: 0, lastUsed: '' };
+    knowledgeBase[key].category = category;
+    knowledgeBase[key].subcat   = subcat || '';
+    knowledgeBase[key].count++;
+    knowledgeBase[key].lastUsed = new Date().toISOString().split('T')[0];
+    saveKnowledgeBase();
+}
+
+// Also learn from existing transactions on first run
+function buildKnowledgeBaseFromHistory() {
+    transactions.forEach(t => {
+        if (t.description && t.category) learnFromTransaction(t.description, t.category, t.subcat || '');
+    });
+    saveKnowledgeBase();
+}
+
+// Suggest category for a raw description. Returns { category, subcat, confidence }
+function suggestCategory(rawDesc) {
+    const key = normaliseDesc(rawDesc);
+    if (!key) return { category: 'Discretionary', subcat: '', confidence: 0 };
+
+    // 1. Exact normalised match
+    if (knowledgeBase[key]) {
+        const kb = knowledgeBase[key];
+        const confidence = Math.min(0.95, 0.6 + (kb.count * 0.07));
+        return { category: kb.category, subcat: kb.subcat, confidence };
+    }
+
+    // 2. Substring match — does any known key appear inside this description or vice versa?
+    const keys = Object.keys(knowledgeBase);
+    let bestMatch = null, bestLen = 0;
+    for (const k of keys) {
+        if (key.includes(k) || k.includes(key)) {
+            if (k.length > bestLen) { bestLen = k.length; bestMatch = k; }
+        }
+    }
+    if (bestMatch) {
+        const kb = knowledgeBase[bestMatch];
+        return { category: kb.category, subcat: kb.subcat, confidence: 0.55 };
+    }
+
+    // 3. Token match — score categories by tokens in common with known entries
+    const tokens = key.split(' ').filter(t => t.length > 2);
+    const scores = {};
+    for (const token of tokens) {
+        for (const [k, v] of Object.entries(knowledgeBase)) {
+            if (k.includes(token)) {
+                const cat = v.category;
+                scores[cat] = (scores[cat] || 0) + v.count;
+            }
+        }
+    }
+    if (Object.keys(scores).length > 0) {
+        const best = Object.entries(scores).sort((a,b) => b[1]-a[1])[0];
+        return { category: best[0], subcat: '', confidence: 0.35 };
+    }
+
+    // 4. Amount-based heuristics as last resort
+    return { category: 'Discretionary', subcat: '', confidence: 0 };
+}
+
+// ══════════════════════════════════════════════════
+// BANK STATEMENT PARSERS
+// ══════════════════════════════════════════════════
+
+// Detect bank from CSV header row
+function detectBankCSV(headerRow) {
+    const h = headerRow.toLowerCase();
+    if (h.includes('started date') || h.includes('completed date') || h.includes('money out')) return 'revolut';
+    if (h.includes('posted account')) return 'aib';
+    if (h.includes('debit') && h.includes('credit') && h.includes('balance')) return 'boi';
+    return 'generic';
+}
+
+// Parse a date string from various Irish bank formats to YYYY-MM-DD
+function parseIrishDate(str) {
+    if (!str) return null;
+    str = str.trim();
+    // YYYY-MM-DD already
+    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+    // DD/MM/YYYY or DD-MM-YYYY
+    const dmy = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+    if (dmy) return `${dmy[3]}-${dmy[2].padStart(2,'0')}-${dmy[1].padStart(2,'0')}`;
+    // DD MMM YYYY (Revolut PDF / BOI)
+    const dmy2 = str.match(/^(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})$/);
+    if (dmy2) {
+        const months = {jan:'01',feb:'02',mar:'03',apr:'04',may:'05',jun:'06',jul:'07',aug:'08',sep:'09',oct:'10',nov:'11',dec:'12'};
+        const m = months[dmy2[2].toLowerCase()];
+        return m ? `${dmy2[3]}-${m}-${dmy2[1].padStart(2,'0')}` : null;
+    }
+    // DD-Mon-YYYY (BOI CSV: 23-Apr-2025)
+    const dmy3 = str.match(/^(\d{1,2})-([A-Za-z]{3})-(\d{4})$/);
+    if (dmy3) {
+        const months = {jan:'01',feb:'02',mar:'03',apr:'04',may:'05',jun:'06',jul:'07',aug:'08',sep:'09',oct:'10',nov:'11',dec:'12'};
+        const m = months[dmy3[2].toLowerCase()];
+        return m ? `${dmy3[3]}-${m}-${dmy3[1].padStart(2,'0')}` : null;
+    }
+    return null;
+}
+
+function parseCSVRow(line) {
+    const cells = [];
+    let cur = '', inQuote = false;
+    for (const ch of line) {
+        if (ch === '"') { inQuote = !inQuote; }
+        else if (ch === ',' && !inQuote) { cells.push(cur.trim()); cur = ''; }
+        else cur += ch;
+    }
+    cells.push(cur.trim());
+    return cells;
+}
+
+function parseRevolutCSV(lines) {
+    const results = [];
+    for (let i = 1; i < lines.length; i++) {
+        const c = parseCSVRow(lines[i]);
+        if (c.length < 5) continue;
+        const date   = parseIrishDate(c[2] || c[0]); // Completed Date
+        const desc   = (c[4] || c[1] || '').replace(/"/g,'').trim();
+        const outAmt = parseFloat((c[5]||'').replace(/[^0-9.\-]/g,''));
+        const inAmt  = parseFloat((c[6]||'').replace(/[^0-9.\-]/g,''));
+        if (!date || !desc) continue;
+        const amount = isNaN(inAmt) || inAmt === 0 ? -(Math.abs(outAmt)||0) : Math.abs(inAmt);
+        if (amount === 0) continue;
+        results.push({ date, description: desc, amount });
+    }
+    return results;
+}
+
+function parseAIBCSV(lines) {
+    const results = [];
+    // AIB has a multi-line header — find the actual data header
+    let dataStart = 0;
+    for (let i = 0; i < lines.length; i++) {
+        if (lines[i].toLowerCase().includes('posted account') || lines[i].toLowerCase().includes('date')) {
+            dataStart = i + 1; break;
+        }
+    }
+    for (let i = dataStart; i < lines.length; i++) {
+        const c = parseCSVRow(lines[i]);
+        if (c.length < 4) continue;
+        const date   = parseIrishDate(c[1]);
+        const desc   = (c[2]||'').replace(/"/g,'').trim();
+        const debit  = parseFloat((c[3]||'').replace(/[^0-9.]/g,''));
+        const credit = parseFloat((c[4]||'').replace(/[^0-9.]/g,''));
+        if (!date || !desc) continue;
+        const amount = !isNaN(credit) && credit > 0 ? credit : -(debit||0);
+        if (amount === 0) continue;
+        results.push({ date, description: desc, amount });
+    }
+    return results;
+}
+
+function parseBOICSV(lines) {
+    const results = [];
+    for (let i = 1; i < lines.length; i++) {
+        const c = parseCSVRow(lines[i]);
+        if (c.length < 4) continue;
+        const date   = parseIrishDate(c[0]);
+        const desc   = (c[1]||'').replace(/"/g,'').trim();
+        const debit  = parseFloat((c[2]||'').replace(/[^0-9.]/g,''));
+        const credit = parseFloat((c[3]||'').replace(/[^0-9.]/g,''));
+        if (!date || !desc) continue;
+        const amount = !isNaN(credit) && credit > 0 ? credit : -(debit||0);
+        if (amount === 0) continue;
+        results.push({ date, description: desc, amount });
+    }
+    return results;
+}
+
+function parseGenericCSV(lines) {
+    // Best-effort: try to find date, description, amount columns
+    const results = [];
+    for (let i = 1; i < lines.length; i++) {
+        const c = parseCSVRow(lines[i]);
+        if (c.length < 3) continue;
+        const date = parseIrishDate(c[0]) || parseIrishDate(c[1]);
+        if (!date) continue;
+        const desc = c.find((v,idx) => idx > 0 && isNaN(parseFloat(v)) && v.length > 2) || '';
+        const amtStr = c.slice().reverse().find(v => !isNaN(parseFloat(v.replace(/[^0-9.\-]/g,''))));
+        const amount = amtStr ? parseFloat(amtStr.replace(/[^0-9.\-]/g,'')) : 0;
+        if (!desc || amount === 0) continue;
+        results.push({ date, description: desc.replace(/"/g,'').trim(), amount });
+    }
+    return results;
+}
+
+function parseCSVStatement(text) {
+    const lines = text.split('\n').filter(l => l.trim());
+    if (!lines.length) return { bank: 'unknown', rows: [] };
+    const bank = detectBankCSV(lines[0]);
+    let rows = [];
+    if (bank === 'revolut') rows = parseRevolutCSV(lines);
+    else if (bank === 'aib')     rows = parseAIBCSV(lines);
+    else if (bank === 'boi')     rows = parseBOICSV(lines);
+    else                          rows = parseGenericCSV(lines);
+    return { bank, rows };
+}
+
+// ── PDF Parsing via pdf.js ──
+async function parsePDFStatement(arrayBuffer) {
+    // Load pdf.js from CDN if not already loaded
+    if (!window.pdfjsLib) {
+        await new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+            'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+
+    const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    let fullText = '';
+
+    for (let p = 1; p <= pdf.numPages; p++) {
+        const page = await pdf.getPage(p);
+        const content = await page.getTextContent();
+        // Group items by approximate Y position to reconstruct rows
+        const byY = {};
+        content.items.forEach(item => {
+            const y = Math.round(item.transform[5] / 5) * 5; // bucket to 5pt rows
+            if (!byY[y]) byY[y] = [];
+            byY[y].push({ x: item.transform[4], text: item.str });
+        });
+        // Sort rows top-to-bottom, items left-to-right within each row
+        const sortedYs = Object.keys(byY).map(Number).sort((a,b) => b-a);
+        for (const y of sortedYs) {
+            const row = byY[y].sort((a,b) => a.x-b.x).map(i => i.text).join(' ');
+            fullText += row + '\n';
+        }
+    }
+
+    return parsePDFText(fullText);
+}
+
+// Detect bank from PDF text and extract transactions
+function parsePDFText(text) {
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+
+    // Detect bank
+    let bank = 'unknown';
+    const textLower = text.toLowerCase();
+    if (textLower.includes('revolut')) bank = 'revolut';
+    else if (textLower.includes('allied irish') || textLower.includes('aib')) bank = 'aib';
+    else if (textLower.includes('bank of ireland') || textLower.includes('boi')) bank = 'boi';
+    else if (textLower.includes('permanent tsb') || textLower.includes('ptsb')) bank = 'ptsb';
+
+    // Store raw text in sessionStorage for debug if needed
+    try { sessionStorage.setItem('lastPdfText', text.slice(0, 5000)); } catch(e) {}
+
+    // Try Revolut-specific parser first if bank is Revolut
+    if (bank === 'revolut') {
+        const revolutRows = parseRevolutPDF(lines);
+        if (revolutRows.length > 0) return { bank, rows: revolutRows };
+    }
+
+    // Generic single-line parser — works when date+desc+amount are on one line
+    const singleLineRows = parsePDFSingleLine(lines);
+    if (singleLineRows.length > 0) return { bank, rows: singleLineRows };
+
+    // Multi-line sliding window parser — for layouts where data spans multiple lines
+    const multiLineRows = parsePDFMultiLine(lines);
+    return { bank, rows: multiLineRows };
+}
+
+// Revolut PDF: reconstructed lines contain date + description + amounts on same line
+// Format: "1 Apr 2026 Applegreen €4.80 €85.00"
+// Money out appears before Money in in the column order
+function parseRevolutPDF(lines) {
+    const rows = [];
+    // Match date at start of line (1 or 2 digit day, full month name or 3-letter abbr)
+    const dateRe = /^(\d{1,2})\s+(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+(\d{4})\s+/i;
+    const months = {jan:'01',feb:'02',mar:'03',apr:'04',may:'05',jun:'06',jul:'07',aug:'08',sep:'09',oct:'10',nov:'11',dec:'12'};
+    // Amount pattern — €1.23 or 1.23
+    const amtGlobal = /€?\s*(\d{1,3}(?:,\d{3})*\.\d{2})/g;
+
+    // Skip header/footer lines
+    const skipRe = /^(date|description|money out|money in|balance|opening|closing|total|page|statement|account|pending|revolut|eur statement|generated|iban|bic|to:|card:|from:|reference:|report|scan|get help|© 202)/i;
+
+    for (const line of lines) {
+        if (skipRe.test(line)) continue;
+
+        const dateMatch = line.match(dateRe);
+        if (!dateMatch) continue;
+
+        const mon  = dateMatch[2].substring(0,3).toLowerCase();
+        const date = `${dateMatch[3]}-${months[mon]}-${dateMatch[1].padStart(2,'0')}`;
+        if (!date) continue;
+
+        // Everything after the date
+        const rest = line.slice(dateMatch[0].length).trim();
+
+        // Extract all € amounts from this line
+        const amounts = [];
+        let m;
+        amtGlobal.lastIndex = 0;
+        while ((m = amtGlobal.exec(rest)) !== null) {
+            amounts.push({ val: parseFloat(m[1].replace(/,/g,'')), idx: m.index });
+        }
+        if (!amounts.length) continue;
+
+        // Description is everything before the first amount
+        const firstAmtIdx = rest.search(/€?\s*\d{1,3}(?:,\d{3})*\.\d{2}/);
+        const desc = (firstAmtIdx > 0 ? rest.slice(0, firstAmtIdx) : rest).replace(/\s+/g,' ').trim();
+        if (!desc || desc.length < 2) continue;
+
+        // Revolut PDF column order: Money out | Money in | Balance
+        // If 3 amounts: out=amounts[0], in=amounts[1], balance=amounts[2]
+        // If 2 amounts: could be (out, balance) or (in, balance)
+        // If 1 amount: ambiguous — use sign heuristic from description
+        let amount;
+        if (amounts.length >= 3) {
+            // out and in — if out > 0 it's a debit, if in > 0 it's a credit
+            const out = amounts[0].val;
+            const inn = amounts[1].val;
+            amount = inn > 0 ? inn : -out;
+        } else if (amounts.length === 2) {
+            // Could be (out, balance) — treat first as debit unless desc suggests income
+            const incomeWords = /salary|wages|payroll|refund|cashback|transfer from|payment from|received|credit/i;
+            amount = incomeWords.test(desc) ? amounts[0].val : -amounts[0].val;
+        } else {
+            // Single amount — use description heuristic
+            const incomeWords = /salary|wages|payroll|refund|cashback|transfer from|payment from|received|credit/i;
+            amount = incomeWords.test(desc) ? amounts[0].val : -amounts[0].val;
+        }
+
+        if (amount === 0) continue;
+        rows.push({ date, description: desc, amount });
+    }
+    return rows;
+}
+
+// Single-line parser — date + description + amount all on one line
+function parsePDFSingleLine(lines) {
+    const rows = [];
+    const datePattern = /\b(\d{1,2}[\s][A-Za-z]{3}[\s]\d{4}|\d{1,2}[\/\-]\d{2}[\/\-]\d{4})\b/;
+
+    for (const line of lines) {
+        const dateMatch = line.match(datePattern);
+        if (!dateMatch) continue;
+        const date = parseIrishDate(dateMatch[0].replace(/\s+/g, ' '));
+        if (!date) continue;
+
+        const amtRe = /(\d{1,3}(?:,\d{3})*\.\d{2})/g;
+        const amounts = [];
+        let m;
+        while ((m = amtRe.exec(line)) !== null) amounts.push(parseFloat(m[1].replace(/,/g,'')));
+        if (!amounts.length) continue;
+
+        const afterDate = line.slice(dateMatch.index + dateMatch[0].length);
+        const firstAmtIdx = afterDate.search(/\d{1,3}(?:,\d{3})*\.\d{2}/);
+        const desc = (firstAmtIdx > 0 ? afterDate.slice(0, firstAmtIdx) : afterDate).replace(/\s+/g,' ').trim();
+        if (!desc || desc.length < 2) continue;
+
+        const isDebit  = /\bDR\b|debit|withdrawal/i.test(line);
+        const isCredit = /\bCR\b|credit|deposit/i.test(line);
+        const mainAmt  = amounts[0];
+        const amount   = isCredit ? mainAmt : isDebit ? -mainAmt : (amounts.length >= 2 ? -mainAmt : mainAmt);
+
+        rows.push({ date, description: desc, amount });
+    }
+    return rows;
+}
+
+// Multi-line sliding window — collects date, desc, amount across adjacent lines
+function parsePDFMultiLine(lines) {
+    const rows = [];
+    const dateRe  = /\b(\d{1,2}[\s\/\-][A-Za-z]{3}[\s\/\-]\d{4}|\d{1,2}[\/\-]\d{2}[\/\-]\d{4})\b/;
+    const amtRe   = /(\d{1,3}(?:,\d{3})*\.\d{2})/;
+
+    for (let i = 0; i < lines.length; i++) {
+        const dateMatch = lines[i].match(dateRe);
+        if (!dateMatch) continue;
+        const date = parseIrishDate(dateMatch[0].replace(/\s+/g,' '));
+        if (!date) continue;
+
+        // Gather next 4 lines into a combined string and parse
+        const chunk = lines.slice(i, i+4).join(' ');
+        const amounts = [];
+        let m;
+        const ar = /(\d{1,3}(?:,\d{3})*\.\d{2})/g;
+        while ((m = ar.exec(chunk)) !== null) amounts.push(parseFloat(m[1].replace(/,/g,'')));
+        if (!amounts.length) continue;
+
+        // Description: text between end of date and first amount in chunk
+        const afterDate = chunk.slice(chunk.indexOf(dateMatch[0]) + dateMatch[0].length);
+        const firstAmtIdx = afterDate.search(/\d{1,3}(?:,\d{3})*\.\d{2}/);
+        const desc = (firstAmtIdx > 0 ? afterDate.slice(0, firstAmtIdx) : afterDate).replace(/\s+/g,' ').trim();
+        if (!desc || desc.length < 2) continue;
+
+        const isDebit  = /\bDR\b|debit|withdrawal/i.test(chunk);
+        const isCredit = /\bCR\b|credit|deposit/i.test(chunk);
+        const mainAmt  = amounts[0];
+        const amount   = isCredit ? mainAmt : isDebit ? -mainAmt : -mainAmt;
+
+        rows.push({ date, description: desc, amount });
+        i += 2;
+    }
+    return rows;
+}
+
+// ══════════════════════════════════════════════════
+// IMPORT REVIEW UI
+// ══════════════════════════════════════════════════
+let importRows = []; // { date, description, amount, category, subcat, confidence, skipped }
+
+async function handleStatementUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    event.target.value = '';
+
+    // Show loading state
+    document.getElementById('importOverlay').classList.remove('hidden');
+    document.getElementById('importBody').innerHTML = `
+        <div style="text-align:center;padding:3rem 1rem;color:var(--muted);">
+            <div style="font-size:2rem;margin-bottom:0.875rem;">⏳</div>
+            <div style="font-weight:600;">Parsing statement…</div>
+            <div style="font-size:0.8125rem;margin-top:0.375rem;">${escapeHtml(file.name)}</div>
+        </div>`;
+    document.getElementById('importTitle').textContent = 'Parsing…';
+    document.getElementById('importBankBadge').textContent = '';
+
+    try {
+        let parsed;
+        if (file.name.toLowerCase().endsWith('.pdf')) {
+            const buf = await file.arrayBuffer();
+            parsed = await parsePDFStatement(buf);
+        } else {
+            const text = await file.text();
+            parsed = parseCSVStatement(text);
+        }
+
+        if (!parsed.rows.length) {
+            const rawText = sessionStorage.getItem('lastPdfText') || '';
+            document.getElementById('importBody').innerHTML = `
+                <div style="text-align:center;padding:2rem 1rem;color:var(--muted);">
+                    <div style="font-size:2rem;margin-bottom:0.875rem;">😕</div>
+                    <div style="font-weight:600;color:var(--text);">Couldn't read this file</div>
+                    <div style="font-size:0.8125rem;margin-top:0.5rem;max-width:300px;margin-left:auto;margin-right:auto;line-height:1.6;">
+                        ${file.name.endsWith('.pdf')
+                            ? 'The PDF layout wasn\'t recognised. Try exporting a <strong>CSV</strong> from the Revolut app instead — go to Account → Statement → Download.'
+                            : 'Check the file is a bank statement export in CSV format.'}
+                    </div>
+                    ${rawText ? `<details style="margin-top:1rem;text-align:left;font-size:0.75rem;max-width:100%;overflow:auto;">
+                        <summary style="cursor:pointer;color:var(--accent);font-weight:600;">Show extracted text (for debugging)</summary>
+                        <pre style="white-space:pre-wrap;word-break:break-all;background:var(--bg);padding:0.75rem;border-radius:0.5rem;margin-top:0.5rem;color:var(--text);font-size:0.7rem;">${escapeHtml(rawText)}</pre>
+                    </details>` : ''}
+                    <button onclick="closeImportOverlay()" class="btn btn-secondary" style="margin-top:1.25rem;">Close</button>
+                </div>`;
+            document.getElementById('importTitle').textContent = 'Import Failed';
+            return;
+        }
+
+        // Attach suggestions from knowledge base
+        importRows = parsed.rows.map((r, i) => {
+            const suggestion = suggestCategory(r.description);
+            // Also check sign — income is positive
+            let category = suggestion.category;
+            if (r.amount > 0 && suggestion.confidence < 0.5) category = 'Income';
+            if (r.amount < 0 && category === 'Income' && suggestion.confidence < 0.5) category = 'Discretionary';
+            return { ...r, id: i, category, subcat: suggestion.subcat, confidence: suggestion.confidence, skipped: false };
+        });
+
+        // Sort newest first
+        importRows.sort((a,b) => b.date.localeCompare(a.date));
+
+        const bankLabel = { revolut:'Revolut', aib:'AIB', boi:'Bank of Ireland', ptsb:'Permanent TSB', unknown:'Unknown Bank', generic:'Generic CSV' };
+        document.getElementById('importTitle').textContent = 'Review Transactions';
+        document.getElementById('importBankBadge').textContent = `${bankLabel[parsed.bank]||parsed.bank} · ${parsed.rows.length} rows`;
+
+        renderImportRows();
+
+    } catch (err) {
+        document.getElementById('importBody').innerHTML = `
+            <div style="text-align:center;padding:3rem 1rem;color:var(--muted);">
+                <div style="font-size:2rem;margin-bottom:0.875rem;">⚠️</div>
+                <div style="font-weight:600;color:var(--text);">Error parsing file</div>
+                <div style="font-size:0.8125rem;margin-top:0.375rem;">${escapeHtml(err.message)}</div>
+                <button onclick="closeImportOverlay()" class="btn btn-secondary" style="margin-top:1.25rem;">Close</button>
+            </div>`;
+        document.getElementById('importTitle').textContent = 'Error';
+    }
+}
+
+function renderImportRows() {
+    const body = document.getElementById('importBody');
+    const active = importRows.filter(r => !r.skipped).length;
+    document.getElementById('importProgress').textContent = `${active} of ${importRows.length} selected`;
+
+    const cats = ['Income','Bill','Loan','Savings','Discretionary','Pension','Investments'];
+    const catOptions = cats.map(c => `<option value="${c}">${CAT_ICON[c]} ${c}</option>`).join('');
+
+    body.innerHTML = importRows.map(r => {
+        const confClass = r.confidence >= 0.7 ? 'conf-high' : r.confidence >= 0.4 ? 'conf-medium' : 'conf-low';
+        const confTip   = r.confidence >= 0.7 ? 'High confidence' : r.confidence >= 0.4 ? 'Medium — check category' : 'Low — please categorise';
+        return `<div class="import-row ${r.skipped?'skipped':''}" id="irow-${r.id}">
+            <div class="import-row-top">
+                <div class="confidence-dot ${confClass}" title="${confTip}"></div>
+                <div class="import-row-desc">
+                    <div class="import-desc-text">${escapeHtml(r.description)}</div>
+                    <div class="import-meta">${new Date(r.date+'T12:00:00').toLocaleDateString('en-IE',{day:'numeric',month:'short',year:'numeric'})}</div>
+                </div>
+                <div class="import-amount ${r.amount>=0?'positive':'negative'}">
+                    ${r.amount>=0?'+':'−'}€${Math.abs(r.amount).toFixed(2)}
+                </div>
+                <button class="skip-btn ${r.skipped?'skipped':''}" onclick="toggleImportSkip(${r.id})" title="${r.skipped?'Include':'Skip'}">
+                    ${r.skipped?'↩':'✕'}
+                </button>
+            </div>
+            <div class="import-row-controls">
+                <select class="field-input" onchange="updateImportCat(${r.id},this.value)" style="height:38px;font-size:0.8125rem;" ${r.skipped?'disabled':''}>
+                    ${cats.map(c=>`<option value="${c}" ${c===r.category?'selected':''}>${CAT_ICON[c]} ${c}</option>`).join('')}
+                </select>
+                <input type="text" class="field-input" placeholder="Sub-category (optional)"
+                    value="${escapeHtml(r.subcat||'')}" oninput="updateImportSubcat(${r.id},this.value)"
+                    style="height:38px;font-size:0.8125rem;" ${r.skipped?'disabled':''}>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function toggleImportSkip(id) {
+    const row = importRows.find(r => r.id === id);
+    if (!row) return;
+    row.skipped = !row.skipped;
+    renderImportRows();
+}
+
+function updateImportCat(id, value) {
+    const row = importRows.find(r => r.id === id);
+    if (row) row.category = value;
+    const active = importRows.filter(r => !r.skipped).length;
+    document.getElementById('importProgress').textContent = `${active} of ${importRows.length} selected`;
+}
+
+function updateImportSubcat(id, value) {
+    const row = importRows.find(r => r.id === id);
+    if (row) row.subcat = value;
+}
+
+function closeImportOverlay() {
+    document.getElementById('importOverlay').classList.add('hidden');
+    importRows = [];
+}
+
+function confirmImport() {
+    const toImport = importRows.filter(r => !r.skipped);
+    if (!toImport.length) { alert('No transactions selected.'); return; }
+
+    let added = 0, skipped = 0;
+    toImport.forEach(r => {
+        // Check for duplicate (same date + description + amount)
+        const isDupe = transactions.some(t =>
+            t.date === r.date &&
+            Math.abs(t.amount) === Math.abs(r.amount) &&
+            t.description === r.description
+        );
+        if (isDupe) { skipped++; return; }
+
+        const amount = r.category !== 'Income' ? -Math.abs(r.amount) : Math.abs(r.amount);
+        transactions.push({
+            id: newId(),
+            date: r.date,
+            category: r.category,
+            amount,
+            description: r.description,
+            subcat: r.subcat || '',
+            note: ''
+        });
+
+        // Feed back into knowledge base
+        learnFromTransaction(r.description, r.category, r.subcat || '');
+        added++;
+    });
+
+    transactions.sort((a,b) => b.date.localeCompare(a.date));
+    saveTransactions();
+    saveKnowledgeBase();
+    renderAll();
+    closeImportOverlay();
+    alert(`Imported ${added} transaction${added!==1?'s':''}${skipped?' ('+skipped+' duplicate'+( skipped!==1?'s':'')+' skipped)':''}.`);
+}
 function exportJSON() {
     const blob=new Blob([JSON.stringify({transactions,quickAddTemplates,budgetTargets,visibleKpis,openingBalances,exportedAt:new Date().toISOString()},null,2)],{type:'application/json'});
     const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:`budget-backup-${new Date().toISOString().split('T')[0]}.json`});
@@ -1865,15 +2592,16 @@ function showSubcatSuggestions() {
     transactions.filter(t=>t.subcat&&t.category===category).forEach(t=>{ freq[t.subcat]=(freq[t.subcat]||0)+1; });
     const topSubcats = Object.entries(freq).sort((a,b)=>b[1]-a[1]).slice(0,6).map(e=>e[0]);
     chips.innerHTML = topSubcats.map(s =>
-        `<button class="subcat-chip" onmousedown="selectSubcat('${s.replace(/'/g,"\\'")}'); return false;">${s}</button>`
+        `<button class="subcat-chip" data-subcat="${escapeHtml(s)}" onmousedown="selectSubcat(this.dataset.subcat); return false;">${escapeHtml(s)}</button>`
     ).join('');
 
     // Dropdown suggestions
     const query = (document.getElementById('transactionSubcat').value||'').toLowerCase().trim();
     if (!suggs.length || !query) { list.classList.add('hidden'); return; }
     list.innerHTML = suggs.slice(0,8).map((s,i) => {
-        const hl = s.replace(new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi'), '<strong>$1</strong>');
-        return `<div class="suggestion-item" onmousedown="selectSubcat('${s.replace(/'/g,"\\'")}'); return false;">${hl}</div>`;
+        const safe = escapeHtml(s);
+        const hl = safe.replace(new RegExp(`(${escapeRegex(query)})`, 'gi'), '<strong>$1</strong>');
+        return `<div class="suggestion-item" data-subcat="${escapeHtml(s)}" onmousedown="selectSubcat(this.dataset.subcat); return false;">${hl}</div>`;
     }).join('');
     list.classList.remove('hidden');
 }
@@ -2056,6 +2784,7 @@ function renderWeeklySummary() {
     document.getElementById('transactionNote').addEventListener('input', updateNotePreview);
 
     loadTemplates();
+    loadKnowledgeBase();
 
     // Restore last selected period filter
     const savedFrom = localStorage.getItem('budgetFilterFrom');
@@ -2064,6 +2793,11 @@ function renderWeeklySummary() {
     if (savedTo)   document.getElementById('filterToDate').value   = savedTo;
 
     loadTransactions();
+
+    // Seed knowledge base from existing transactions if KB is empty
+    if (!Object.keys(knowledgeBase).length && transactions.length) {
+        buildKnowledgeBaseFromHistory();
+    }
 
     // ── Unregister any old service workers ──
     if ('serviceWorker' in navigator) {
