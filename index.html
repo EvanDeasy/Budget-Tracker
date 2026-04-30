@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <!-- ── Version stamp — increment this (e.g. v11, v12) every time you push an update ── -->
-    <meta name="app-version" content="v20">    <!-- ── No-cache headers — tells browsers not to serve a stale cached copy ── -->
+    <meta name="app-version" content="v21">    <!-- ── No-cache headers — tells browsers not to serve a stale cached copy ── -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -18,14 +18,65 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root {
+    /* Brand category accents */
     --income:  #16a34a; --bill:    #dc2626; --loan:    #ea580c;
     --savings: #2563eb; --disc:    #7c3aed; --pension: #4338ca; --invest:  #0d9488;
+
+    /* Core surfaces */
     --surface: #ffffff; --bg:      #f4f4f5; --border:  #e4e4e7;
     --text:    #18181b; --muted:   #71717a; --accent:  #2563eb;
+    --accent-hover: #1d4ed8;
+    --surface-hover: #eff6ff;
+
+    /* Status palette */
+    --success-bg: #f0fdf4; --success-border: #bbf7d0; --success-fg: #15803d;
+    --success-bg-hover: #dcfce7;
+    --warn-bg:    #fef3c7; --warn-border:    #fcd34d; --warn-fg:    #b45309;
+    --warn-amber: #f59e0b;
+    --danger-bg:  #fef2f2; --danger-border:  #fca5a5; --danger-fg:  #b91c1c;
+    --danger-bg-hover: #fee2e2; --danger-border-soft: #fecaca;
+
+    /* Hero gradients */
+    --hero-ok:   linear-gradient(135deg, #15803d, #16a34a);
+    --hero-warn: linear-gradient(135deg, #b45309, #d97706);
+    --hero-over: linear-gradient(135deg, #b91c1c, #dc2626);
+
+    /* Per-category tints — each pair is (light fill, mid fill) */
+    --cat-income-bg:        #dcfce7; --cat-income-bg-soft:        #f0fdf4; --cat-income-border:        #bbf7d0; --cat-income-fg:        #15803d;
+    --cat-bill-bg:          #fee2e2; --cat-bill-bg-soft:          #fef2f2; --cat-bill-border:          #fecaca; --cat-bill-fg:          #b91c1c;
+    --cat-loan-bg:          #ffedd5; --cat-loan-bg-soft:          #fff7ed; --cat-loan-border:          #fed7aa; --cat-loan-fg:          #c2410c;
+    --cat-savings-bg:       #dbeafe; --cat-savings-bg-soft:       #eff6ff; --cat-savings-border:       #bfdbfe; --cat-savings-fg:       #1d4ed8;
+    --cat-disc-bg:          #ede9fe; --cat-disc-bg-soft:          #f5f3ff; --cat-disc-border:          #ddd6fe; --cat-disc-fg:          #6d28d9;
+    --cat-pension-bg:       #e0e7ff; --cat-pension-bg-soft:       #eef2ff; --cat-pension-border:       #c7d2fe; --cat-pension-fg:       #3730a3;
+    --cat-invest-bg:        #ccfbf1; --cat-invest-bg-soft:        #f0fdfa; --cat-invest-border:        #99f6e4; --cat-invest-fg:        #0f766e;
+
+    /* Confidence dots */
+    --conf-high:   #16a34a;
+    --conf-medium: #f59e0b;
+    --conf-low:    #dc2626;
 }
 .dark-mode {
     --surface: #1c1c1e; --bg:     #111113; --border:  #2c2c2e;
     --text:    #f4f4f5; --muted:  #a1a1aa;
+    --accent-hover: #3b82f6;
+    --surface-hover: #1e293b;
+
+    /* Status — deep tinted backgrounds with higher-contrast fg */
+    --success-bg: #052e16; --success-border: #166534; --success-fg: #86efac;
+    --success-bg-hover: #14532d;
+    --warn-bg:    #422006; --warn-border:    #92400e; --warn-fg:    #fde68a;
+    --warn-amber: #fbbf24;
+    --danger-bg:  #450a0a; --danger-border:  #991b1b; --danger-fg:  #fca5a5;
+    --danger-bg-hover: #7f1d1d; --danger-border-soft: #7f1d1d;
+
+    /* Per-category tints in dark mode — deep saturated bg, light fg */
+    --cat-income-bg:        #052e16; --cat-income-bg-soft:        #0a1f12; --cat-income-border:        #166534; --cat-income-fg:        #86efac;
+    --cat-bill-bg:          #450a0a; --cat-bill-bg-soft:          #1f0a0a; --cat-bill-border:          #991b1b; --cat-bill-fg:          #fca5a5;
+    --cat-loan-bg:          #431407; --cat-loan-bg-soft:          #1f0d05; --cat-loan-border:          #9a3412; --cat-loan-fg:          #fdba74;
+    --cat-savings-bg:       #172554; --cat-savings-bg-soft:       #0c1428; --cat-savings-border:       #1e40af; --cat-savings-fg:       #93c5fd;
+    --cat-disc-bg:          #2e1065; --cat-disc-bg-soft:          #170a32; --cat-disc-border:          #6d28d9; --cat-disc-fg:          #c4b5fd;
+    --cat-pension-bg:       #1e1b4b; --cat-pension-bg-soft:       #0f0d27; --cat-pension-border:       #4338ca; --cat-pension-fg:       #a5b4fc;
+    --cat-invest-bg:        #042f2e; --cat-invest-bg-soft:        #021917; --cat-invest-border:        #115e59; --cat-invest-fg:        #5eead4;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100dvh; transition: background 0.2s, color 0.2s; }
@@ -74,7 +125,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     box-shadow: 0 2px 8px rgba(37,99,235,0.35);
 }
 .nav-btn.add-tab .add-circle svg { width: 22px; height: 22px; stroke: #fff; }
-.nav-btn.add-tab.active .add-circle { background: #1d4ed8; }
+.nav-btn.add-tab.active .add-circle { background: var(--accent-hover); }
 
 /* ── Page layout ── */
 #app { max-width: 900px; margin: 0 auto; padding: 0 0 5.5rem; }
@@ -93,7 +144,24 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 @media (min-width: 540px) { .kpi-grid { grid-template-columns: repeat(3,1fr); } }
 @media (min-width: 768px) { .kpi-grid { grid-template-columns: repeat(4,1fr); } }
 .kpi-card { background: var(--surface); border: 1px solid var(--border); border-radius: 0.875rem; padding: 1rem; position: relative; overflow: hidden; }
-.kpi-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; border-radius:3px 3px 0 0; }
+.kpi-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; border-radius:3px 3px 0 0; z-index: 1; }
+/* Subtle category-tinted gradient — uses ::after so the ::before colour bar stays sharp on top */
+.kpi-card::after {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 60%;
+    pointer-events: none; opacity: 0.6;
+    background: linear-gradient(180deg, var(--kpi-tint, transparent) 0%, transparent 100%);
+}
+.kpi-card.income       { --kpi-tint: var(--cat-income-bg-soft); }
+.kpi-card.bills        { --kpi-tint: var(--cat-bill-bg-soft); }
+.kpi-card.savings      { --kpi-tint: var(--cat-savings-bg-soft); }
+.kpi-card.disc         { --kpi-tint: var(--cat-disc-bg-soft); }
+.kpi-card.daily        { --kpi-tint: var(--cat-disc-bg-soft); }
+.kpi-card.pension      { --kpi-tint: var(--cat-pension-bg-soft); }
+.kpi-card.invest       { --kpi-tint: var(--cat-invest-bg-soft); }
+.kpi-card.avail        { --kpi-tint: var(--cat-loan-bg-soft); }
+.kpi-card.saverate     { --kpi-tint: var(--cat-income-bg-soft); }
+.kpi-card.remain-pos   { --kpi-tint: var(--cat-income-bg-soft); }
+.kpi-card.remain-neg   { --kpi-tint: var(--cat-bill-bg-soft); }
 .kpi-card.income::before   { background: var(--income); }
 .kpi-card.bills::before    { background: var(--bill); }
 .kpi-card.savings::before  { background: var(--savings); }
@@ -105,17 +173,19 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .kpi-card.saverate::before { background: #059669; }
 .kpi-card.remain-pos::before { background: var(--income); }
 .kpi-card.remain-neg::before { background: var(--bill); }
+/* Make sure label/value/sub stay above the gradient */
+.kpi-label, .kpi-value, .kpi-sub { position: relative; z-index: 2; }
 .kpi-label { font-size: 0.6875rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.375rem; }
 .kpi-value { font-family: 'DM Mono', monospace; font-size: 1.25rem; font-weight: 500; letter-spacing: -0.02em; line-height: 1.2; }
 .kpi-sub   { font-size: 0.6875rem; color: var(--muted); margin-top: 0.25rem; }
 
 /* ── Budget progress bar ── */
-.budget-bar-track { height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; margin-top: 0.625rem; }
+.budget-bar-track { height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; margin-top: 0.625rem; position: relative; z-index: 2; }
 .budget-bar-fill  { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
 .budget-bar-fill.ok   { background: var(--income); }
-.budget-bar-fill.warn { background: #f59e0b; }
+.budget-bar-fill.warn { background: var(--warn-amber); }
 .budget-bar-fill.over { background: var(--bill); }
-.budget-pct { font-size: 0.625rem; color: var(--muted); margin-top: 0.25rem; }
+.budget-pct { font-size: 0.625rem; color: var(--muted); margin-top: 0.25rem; position: relative; z-index: 2; }
 
 /* ── Daily Remaining Spend hero card ── */
 .daily-hero {
@@ -128,9 +198,9 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     width: 120px; height: 120px; border-radius: 50%;
     background: rgba(255,255,255,0.08);
 }
-.daily-hero.hero-ok   { background: linear-gradient(135deg, #15803d, #16a34a); color: #fff; }
-.daily-hero.hero-warn { background: linear-gradient(135deg, #b45309, #d97706); color: #fff; }
-.daily-hero.hero-over { background: linear-gradient(135deg, #b91c1c, #dc2626); color: #fff; }
+.daily-hero.hero-ok   { background: var(--hero-ok);   color: #fff; }
+.daily-hero.hero-warn { background: var(--hero-warn); color: #fff; }
+.daily-hero.hero-over { background: var(--hero-over); color: #fff; }
 .daily-hero.hero-none { background: var(--surface); border: 1px solid var(--border); color: var(--text); }
 .hero-left { flex: 1; min-width: 0; }
 .hero-label { font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; opacity: 0.8; margin-bottom: 0.375rem; }
@@ -172,7 +242,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     border: 1.5px solid var(--border); background: var(--bg); color: var(--muted);
     transition: all 0.15s; white-space: nowrap;
 }
-.subcat-chip:hover { border-color: var(--disc); color: var(--disc); background: #f5f3ff; }
+.subcat-chip:hover { border-color: var(--disc); color: var(--disc); background: var(--cat-disc-bg-soft); }
 
 /* ── Month pills — float above KPI grid, no card wrapper ── */
 .month-strip { display: flex; gap: 0.375rem; overflow-x: auto; padding-bottom: 2px; -ms-overflow-style:none; scrollbar-width:none; }
@@ -183,13 +253,13 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     border: 1.5px solid var(--border); background: var(--surface); color: var(--muted);
     transition: all 0.15s; white-space: nowrap;
 }
-.month-pill:hover  { border-color: var(--accent); color: var(--accent); background: #eff6ff; }
-.month-pill.active { border-color: var(--accent); color: var(--accent); background: #eff6ff; }
+.month-pill:hover  { border-color: var(--accent); color: var(--accent); background: var(--surface-hover); }
+.month-pill.active { border-color: var(--accent); color: var(--accent); background: var(--surface-hover); }
 
 /* ── Alert banners ── */
 .alert-banner { border-radius: 0.875rem; padding: 0.875rem 1.125rem; display: flex; align-items: flex-start; gap: 0.75rem; }
-.alert-banner.warn   { background: #fef3c7; border: 1px solid #fcd34d; }
-.alert-banner.danger { background: #fef2f2; border: 1px solid #fca5a5; }
+.alert-banner.warn   { background: var(--warn-bg); border: 1px solid var(--warn-border); color: var(--warn-fg); }
+.alert-banner.danger { background: var(--danger-bg); border: 1px solid var(--danger-border); color: var(--danger-fg); }
 .alert-icon { font-size: 1.125rem; flex-shrink: 0; }
 .alert-msg  { font-size: 0.8125rem; font-weight: 500; }
 .alert-msg span { display:block; font-size:0.75rem; color:var(--muted); font-weight:400; margin-top:0.1rem; }
@@ -217,32 +287,32 @@ textarea.field-input { height: auto; padding: 0.75rem 0.875rem; resize: none; li
 /* ── Buttons ── */
 .btn { display:inline-flex; align-items:center; justify-content:center; gap:0.375rem; height:48px; padding:0 1.25rem; border-radius:0.625rem; font-family:'DM Sans',sans-serif; font-size:0.9375rem; font-weight:600; cursor:pointer; border:none; transition:all 0.15s; white-space:nowrap; }
 .btn-primary   { background: var(--accent); color: #fff; }
-.btn-primary:hover { background: #1d4ed8; }
+.btn-primary:hover { background: var(--accent-hover); }
 .btn-secondary { background: var(--bg); color: var(--text); border: 1.5px solid var(--border); }
 .btn-secondary:hover { background: var(--border); }
 .btn-sm { height: 36px; padding: 0 0.875rem; font-size: 0.8125rem; border-radius: 0.5rem; }
-.btn-danger { background: #fef2f2; color: var(--bill); border: 1.5px solid #fecaca; }
-.btn-danger:hover { background: #fee2e2; }
+.btn-danger { background: var(--danger-bg); color: var(--bill); border: 1.5px solid var(--danger-border-soft); }
+.btn-danger:hover { background: var(--danger-bg-hover); }
 
 /* ── Quick add pills ── */
 .template-pill { display:inline-flex; align-items:center; height:36px; padding:0 0.75rem; border-radius:999px; font-size:0.8125rem; font-weight:500; cursor:pointer; border:1.5px solid; transition:all 0.15s; white-space:nowrap; }
-.pill-income:hover { background:#dcfce7; } .pill-income  { color:var(--income); border-color:#bbf7d0; background:#f0fdf4; }
-.pill-bill:hover   { background:#fee2e2; } .pill-bill    { color:var(--bill);   border-color:#fecaca; background:#fef2f2; }
-.pill-loan:hover   { background:#ffedd5; } .pill-loan    { color:var(--loan);   border-color:#fed7aa; background:#fff7ed; }
-.pill-savings:hover{ background:#dbeafe; } .pill-savings { color:var(--savings);border-color:#bfdbfe; background:#eff6ff; }
-.pill-disc:hover   { background:#ede9fe; } .pill-disc    { color:var(--disc);   border-color:#ddd6fe; background:#f5f3ff; }
-.pill-pension:hover{ background:#e0e7ff; } .pill-pension { color:var(--pension);border-color:#c7d2fe; background:#eef2ff; }
-.pill-invest:hover { background:#ccfbf1; } .pill-invest  { color:var(--invest); border-color:#99f6e4; background:#f0fdfa; }
+.pill-income:hover { background:var(--cat-income-bg); }  .pill-income  { color:var(--income); border-color:var(--cat-income-border); background:var(--cat-income-bg-soft); }
+.pill-bill:hover   { background:var(--cat-bill-bg); }    .pill-bill    { color:var(--bill);   border-color:var(--cat-bill-border);   background:var(--cat-bill-bg-soft); }
+.pill-loan:hover   { background:var(--cat-loan-bg); }    .pill-loan    { color:var(--loan);   border-color:var(--cat-loan-border);   background:var(--cat-loan-bg-soft); }
+.pill-savings:hover{ background:var(--cat-savings-bg); } .pill-savings { color:var(--savings);border-color:var(--cat-savings-border);background:var(--cat-savings-bg-soft); }
+.pill-disc:hover   { background:var(--cat-disc-bg); }    .pill-disc    { color:var(--disc);   border-color:var(--cat-disc-border);   background:var(--cat-disc-bg-soft); }
+.pill-pension:hover{ background:var(--cat-pension-bg); } .pill-pension { color:var(--pension);border-color:var(--cat-pension-border);background:var(--cat-pension-bg-soft); }
+.pill-invest:hover { background:var(--cat-invest-bg); }  .pill-invest  { color:var(--invest); border-color:var(--cat-invest-border); background:var(--cat-invest-bg-soft); }
 
 /* ── Category badge ── */
 .cat-badge { display:inline-block; padding:0.2rem 0.6rem; border-radius:999px; font-size:0.6875rem; font-weight:600; }
-.cat-Income       { background:#dcfce7; color:#15803d; }
-.cat-Bill         { background:#fee2e2; color:#b91c1c; }
-.cat-Loan         { background:#ffedd5; color:#c2410c; }
-.cat-Savings      { background:#dbeafe; color:#1d4ed8; }
-.cat-Discretionary{ background:#ede9fe; color:#6d28d9; }
-.cat-Pension      { background:#e0e7ff; color:#3730a3; }
-.cat-Investments  { background:#ccfbf1; color:#0f766e; }
+.cat-Income       { background:var(--cat-income-bg);  color:var(--cat-income-fg); }
+.cat-Bill         { background:var(--cat-bill-bg);    color:var(--cat-bill-fg); }
+.cat-Loan         { background:var(--cat-loan-bg);    color:var(--cat-loan-fg); }
+.cat-Savings      { background:var(--cat-savings-bg); color:var(--cat-savings-fg); }
+.cat-Discretionary{ background:var(--cat-disc-bg);    color:var(--cat-disc-fg); }
+.cat-Pension      { background:var(--cat-pension-bg); color:var(--cat-pension-fg); }
+.cat-Investments  { background:var(--cat-invest-bg);  color:var(--cat-invest-fg); }
 
 /* ── Transaction rows ── */
 .tx-row { display:flex; align-items:center; gap:0.75rem; padding:0.875rem 1.25rem; border-bottom:1px solid var(--border); transition:background 0.1s; }
@@ -255,8 +325,8 @@ textarea.field-input { height: auto; padding: 0.75rem 0.875rem; resize: none; li
 .tx-amount { font-family:'DM Mono',monospace; font-size:0.9375rem; font-weight:500; margin-left:auto; flex-shrink:0; }
 .tx-actions { display:flex; gap:0.25rem; flex-shrink:0; }
 .tx-action-btn { width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; border:none; background:var(--bg); cursor:pointer; color:var(--muted); transition:all 0.15s; }
-.tx-action-btn.edit:hover { background:#eff6ff; color:var(--accent); }
-.tx-action-btn.del:hover  { background:#fef2f2; color:var(--bill); }
+.tx-action-btn.edit:hover { background:var(--surface-hover); color:var(--accent); }
+.tx-action-btn.del:hover  { background:var(--danger-bg); color:var(--bill); }
 
 /* ── Search bar ── */
 .search-bar { position:relative; }
@@ -273,7 +343,7 @@ textarea.field-input { height: auto; padding: 0.75rem 0.875rem; resize: none; li
 }
 .suggestion-item { padding:0.75rem 1rem; font-size:0.875rem; cursor:pointer; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); transition:background 0.1s; }
 .suggestion-item:last-child { border-bottom:none; }
-.suggestion-item:hover { background:#eff6ff; }
+.suggestion-item:hover { background:var(--surface-hover); }
 
 /* ── Tab animation ── */
 .tab-content { animation: fadeUp 0.2s ease; }
@@ -346,6 +416,29 @@ textarea.field-input { height: auto; padding: 0.75rem 0.875rem; resize: none; li
 .hidden { display:none !important; }
 .chip-group { display:flex; flex-wrap:wrap; gap:0.5rem; }
 
+/* ── Toast notifications ── */
+.toast-container {
+    position: fixed; bottom: calc(72px + env(safe-area-inset-bottom)); left: 50%;
+    transform: translateX(-50%); z-index: 400;
+    display: flex; flex-direction: column-reverse; gap: 0.5rem;
+    pointer-events: none; max-width: calc(100vw - 2rem);
+}
+.toast {
+    background: var(--surface); color: var(--text);
+    border: 1px solid var(--border); border-radius: 0.75rem;
+    padding: 0.75rem 1rem; font-size: 0.875rem; font-weight: 500;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    display: flex; align-items: center; gap: 0.5rem;
+    min-width: 200px; pointer-events: auto;
+    opacity: 0; transform: translateY(8px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.toast.visible { opacity: 1; transform: translateY(0); }
+.toast.success { border-color: var(--success-border); background: var(--success-bg); color: var(--success-fg); }
+.toast.error   { border-color: var(--danger-border); background: var(--danger-bg); color: var(--danger-fg); }
+.toast.info    { border-color: var(--accent); }
+.toast-icon { font-size: 1rem; line-height: 1; }
+
 /* ── Filter bar (history tab) ── */
 .history-filters { display:flex; gap:0.5rem; flex-direction:column; }
 .date-row { display:flex; gap:0.5rem; }
@@ -385,16 +478,16 @@ textarea.field-input { height: auto; padding: 0.75rem 0.875rem; resize: none; li
 .confidence-dot {
     width:8px; height:8px; border-radius:50%; flex-shrink:0; margin-top:4px;
 }
-.conf-high   { background:#16a34a; }
-.conf-medium { background:#f59e0b; }
-.conf-low    { background:#dc2626; }
+.conf-high   { background:var(--conf-high); }
+.conf-medium { background:var(--conf-medium); }
+.conf-low    { background:var(--conf-low); }
 .skip-btn {
     width:36px; height:36px; border-radius:8px; border:1.5px solid var(--border);
     background:var(--bg); cursor:pointer; color:var(--muted); font-size:1rem;
     display:flex; align-items:center; justify-content:center; transition:all 0.15s; flex-shrink:0;
 }
-.skip-btn:hover { background:#fef2f2; color:var(--bill); border-color:#fecaca; }
-.skip-btn.skipped { background:#fef2f2; color:var(--bill); border-color:#fecaca; }
+.skip-btn:hover { background:var(--danger-bg); color:var(--bill); border-color:var(--danger-border-soft); }
+.skip-btn.skipped { background:var(--danger-bg); color:var(--bill); border-color:var(--danger-border-soft); }
 .import-progress { font-size:0.8125rem; color:var(--muted); flex:1; }
 .import-bank-badge {
     display:inline-flex; align-items:center; gap:0.375rem; padding:0.25rem 0.625rem;
@@ -610,7 +703,7 @@ textarea.field-input { height: auto; padding: 0.75rem 0.875rem; resize: none; li
             </div>
             <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
                 <button onclick="clearFilters()" class="btn btn-secondary btn-sm" style="height:40px;">Clear Filters</button>
-                <button onclick="exportCSV()" class="btn btn-sm" style="height:40px;background:#16a34a;color:#fff;">Export CSV ↓</button>
+                <button onclick="exportCSV()" class="btn btn-sm" style="height:40px;background:var(--income);color:#fff;">Export CSV ↓</button>
                 <label class="btn btn-sm" style="height:40px;background:var(--accent);color:#fff;cursor:pointer;">
                     📄 Import Statement
                     <input type="file" accept=".pdf,.csv" onchange="handleStatementUpload(event)" class="hidden">
@@ -779,7 +872,7 @@ textarea.field-input { height: auto; padding: 0.75rem 0.875rem; resize: none; li
 
 <script>
 // ── Version — must match the <meta name="app-version"> tag above ──
-const APP_VERSION = 'v20';
+const APP_VERSION = 'v21';
 
 // ── Local date helper — avoids UTC offset shifting date by a day ──
 const localDateStr = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -794,6 +887,29 @@ const escapeRegex = s => String(s ?? '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 // ── ID generator — UUIDs avoid float-precision issues with Date.now()+Math.random() ──
 const newId = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(36).slice(2));
+
+// ── Toast — non-blocking feedback that matches the design language ──
+// Replaces inline `btn.textContent='✓ Saved'` patterns and most alert() calls.
+function toast(message, type = 'info', duration = 2200) {
+    let container = document.getElementById('toastContainer');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toastContainer';
+        container.className = 'toast-container';
+        document.body.appendChild(container);
+    }
+    const el = document.createElement('div');
+    el.className = `toast ${type}`;
+    const icon = type === 'success' ? '✓' : type === 'error' ? '⚠' : 'ℹ';
+    el.innerHTML = `<span class="toast-icon">${icon}</span><span>${escapeHtml(message)}</span>`;
+    container.appendChild(el);
+    // Force reflow so the transition fires
+    requestAnimationFrame(() => el.classList.add('visible'));
+    setTimeout(() => {
+        el.classList.remove('visible');
+        setTimeout(() => el.remove(), 250);
+    }, duration);
+}
 
 // ══════════════════════════════════════════════════
 // STATE
@@ -834,9 +950,9 @@ const KPI_DEFS = [
 // ── Category config ──
 const CAT_ICON   = { Income:'💵', Bill:'🧾', Loan:'🏦', Savings:'💰', Discretionary:'🛍️', Pension:'👴', Investments:'📈' };
 const CAT_PILL   = { Income:'pill-income', Bill:'pill-bill', Loan:'pill-loan', Savings:'pill-savings', Discretionary:'pill-disc', Pension:'pill-pension', Investments:'pill-invest' };
-const CAT_BG     = { Income:'#dcfce7', Bill:'#fee2e2', Loan:'#ffedd5', Savings:'#dbeafe', Discretionary:'#ede9fe', Pension:'#e0e7ff', Investments:'#ccfbf1' };
+const CAT_BG     = { Income:'var(--cat-income-bg)', Bill:'var(--cat-bill-bg)', Loan:'var(--cat-loan-bg)', Savings:'var(--cat-savings-bg)', Discretionary:'var(--cat-disc-bg)', Pension:'var(--cat-pension-bg)', Investments:'var(--cat-invest-bg)' };
 const CAT_COLOR  = { Income:'var(--income)', Bill:'var(--bill)', Loan:'var(--loan)', Savings:'var(--savings)', Discretionary:'var(--disc)', Pension:'var(--pension)', Investments:'var(--invest)' };
-const CAT_GRAD   = { Income:'linear-gradient(135deg,#f0fdf4,#dcfce7)', Bill:'linear-gradient(135deg,#fef2f2,#fee2e2)', Loan:'linear-gradient(135deg,#fff7ed,#ffedd5)', Savings:'linear-gradient(135deg,#eff6ff,#dbeafe)', Discretionary:'linear-gradient(135deg,#f5f3ff,#ede9fe)', Pension:'linear-gradient(135deg,#eef2ff,#e0e7ff)', Investments:'linear-gradient(135deg,#f0fdfa,#ccfbf1)' };
+const CAT_GRAD   = { Income:'linear-gradient(135deg,var(--cat-income-bg-soft),var(--cat-income-bg))', Bill:'linear-gradient(135deg,var(--cat-bill-bg-soft),var(--cat-bill-bg))', Loan:'linear-gradient(135deg,var(--cat-loan-bg-soft),var(--cat-loan-bg))', Savings:'linear-gradient(135deg,var(--cat-savings-bg-soft),var(--cat-savings-bg))', Discretionary:'linear-gradient(135deg,var(--cat-disc-bg-soft),var(--cat-disc-bg))', Pension:'linear-gradient(135deg,var(--cat-pension-bg-soft),var(--cat-pension-bg))', Investments:'linear-gradient(135deg,var(--cat-invest-bg-soft),var(--cat-invest-bg))' };
 const CHART_COLORS = { Income:'rgba(22,163,74,0.7)', Bill:'rgba(220,38,38,0.7)', Loan:'rgba(234,88,12,0.7)', Savings:'rgba(37,99,235,0.7)', Discretionary:'rgba(124,58,237,0.7)', Investments:'rgba(13,148,136,0.7)' };
 const CHART_FONT   = { family:'DM Sans', size:11 };
 const TARGET_CATS  = ['Discretionary','Savings','Investments','Bill','Loan'];
@@ -1012,11 +1128,11 @@ function renderPaydayStatus() {
     for (let i=1;i<incomeDates.length;i++) gaps.push(Math.round((incomeDates[i]-incomeDates[i-1])/86400000));
     const medianGap = gaps.slice().sort((a,b)=>a-b)[Math.floor(gaps.length/2)];
 
-    el.innerHTML = `<div style="display:flex;align-items:center;gap:0.625rem;padding:0.75rem;background:#f0fdf4;border-radius:0.625rem;border:1px solid #86efac;margin-bottom:0.75rem;">
+    el.innerHTML = `<div style="display:flex;align-items:center;gap:0.625rem;padding:0.75rem;background:var(--success-bg);border-radius:0.625rem;border:1px solid var(--success-border);margin-bottom:0.75rem;">
         <span style="font-size:1.25rem;">✅</span>
         <div>
-            <div style="font-size:0.875rem;font-weight:600;color:#15803d;">Auto-detection active</div>
-            <div style="font-size:0.75rem;color:#166534;margin-top:0.125rem;">Based on ${incomeDates.length} income entries · ~${medianGap} day cycle</div>
+            <div style="font-size:0.875rem;font-weight:600;color:var(--success-fg);">Auto-detection active</div>
+            <div style="font-size:0.75rem;color:var(--success-fg);opacity:0.85;margin-top:0.125rem;">Based on ${incomeDates.length} income entries · ~${medianGap} day cycle</div>
         </div>
     </div>
     <div class="settings-row" style="padding-top:0;">
@@ -1069,9 +1185,7 @@ function saveTargets() {
     updateKPIs();
     renderDailyHero();      // target change immediately updates the hero
     renderWeeklySummary();
-    const btn = event.target;
-    btn.textContent = '✓ Saved'; btn.style.background = 'var(--income)';
-    setTimeout(() => { btn.textContent = 'Save Targets'; btn.style.background = ''; }, 1500);
+    toast('Targets saved', 'success');
 }
 
 // ── Opening balances ──
@@ -1082,9 +1196,7 @@ function saveBalances() {
     });
     localStorage.setItem('budgetOpeningBalances', JSON.stringify(openingBalances));
     updateKPIs();
-    const btn = event.target;
-    btn.textContent = '✓ Saved'; btn.style.background = 'var(--income)';
-    setTimeout(() => { btn.textContent = 'Save Balances'; btn.style.background = ''; }, 1500);
+    toast('Balances saved', 'success');
 }
 
 // ══════════════════════════════════════════════════
@@ -1339,12 +1451,13 @@ function highlightForm() {
 
 function saveTemplate() {
     const name=document.getElementById('templateName').value.trim(), category=document.getElementById('templateCategory').value, amount=parseFloat(document.getElementById('templateAmount').value);
-    if (!name) { alert('Please enter a template name'); return; }
-    if (!amount||amount<=0) { alert('Please enter a valid amount'); return; }
-    if (quickAddTemplates.some(t=>t.name.toLowerCase()===name.toLowerCase()&&t.category===category)) { alert('Template already exists'); return; }
+    if (!name) { toast('Please enter a template name', 'error'); return; }
+    if (!amount||amount<=0) { toast('Please enter a valid amount', 'error'); return; }
+    if (quickAddTemplates.some(t=>t.name.toLowerCase()===name.toLowerCase()&&t.category===category)) { toast('Template already exists', 'error'); return; }
     quickAddTemplates.push({ id: newId(), name, category, amount: category!=='Income'?-Math.abs(amount):Math.abs(amount) });
     saveTemplates(); renderQuickAdd();
     document.getElementById('templateName').value=''; document.getElementById('templateAmount').value='';
+    toast('Template saved', 'success');
 }
 
 function deleteTemplate(id) {
@@ -1461,8 +1574,9 @@ function addTransaction() {
     let amount=parseFloat(document.getElementById('transactionAmount').value);
     const description=document.getElementById('transactionDescription').value, note=document.getElementById('transactionNote').value.trim();
     const subcat=document.getElementById('transactionSubcat').value.trim();
-    if (!date||!amount||amount<=0) { alert('Please fill in date and a valid amount'); return; }
+    if (!date||!amount||amount<=0) { toast('Please fill in date and a valid amount', 'error'); return; }
     amount=category!=='Income'?-Math.abs(amount):Math.abs(amount);
+    const isEdit = !!editingId;
     const tx={ id:editingId||newId(), date, category, amount, description:description||category, note, subcat };
     if (editingId) {
         const idx=transactions.findIndex(t=>String(t.id)===String(editingId));
@@ -1474,10 +1588,7 @@ function addTransaction() {
     }
     transactions.sort((a,b)=>new Date(b.date)-new Date(a.date));
     saveTransactions(); renderAll(); clearForm();
-    // Brief success feedback
-    const btn=document.getElementById('addBtn');
-    btn.textContent='✓ Added'; btn.style.background='var(--income)';
-    setTimeout(()=>{ btn.textContent='Add Transaction'; btn.style.background=''; }, 1200);
+    toast(isEdit ? 'Transaction updated' : 'Transaction added', 'success');
 }
 
 function editTransaction(id) {
@@ -1992,7 +2103,7 @@ function clearFilters() {
 }
 
 function exportCSV() {
-    const filtered=getFilteredTransactions(); if (!filtered.length){alert('No transactions to export');return;}
+    const filtered=getFilteredTransactions(); if (!filtered.length){toast('No transactions to export', 'error');return;}
     // RFC 4180: wrap in quotes if contains comma/quote/newline; double internal quotes
     const csvField = v => {
         const s = String(v ?? '');
@@ -2045,8 +2156,8 @@ function importCSV(event) {
         }).filter(t=>t.date&&t.amount);
         if (imported.length) {
             transactions.push(...imported); transactions.sort((a,b)=>new Date(b.date)-new Date(a.date));
-            saveTransactions(); renderAll(); alert(`Imported ${imported.length} transactions`);
-        } else alert('No valid transactions found');
+            saveTransactions(); renderAll(); toast(`Imported ${imported.length} transactions`, 'success');
+        } else toast('No valid transactions found', 'error');
         event.target.value='';
     };
     reader.readAsText(file);
@@ -2631,7 +2742,7 @@ function closeImportOverlay() {
 
 function confirmImport() {
     const toImport = importRows.filter(r => !r.skipped);
-    if (!toImport.length) { alert('No transactions selected.'); return; }
+    if (!toImport.length) { toast('No transactions selected', 'error'); return; }
 
     let added = 0, skipped = 0;
     toImport.forEach(r => {
@@ -2664,7 +2775,7 @@ function confirmImport() {
     saveKnowledgeBase();
     renderAll();
     closeImportOverlay();
-    alert(`Imported ${added} transaction${added!==1?'s':''}${skipped?' ('+skipped+' duplicate'+( skipped!==1?'s':'')+' skipped)':''}.`);
+    toast(`Imported ${added} transaction${added!==1?'s':''}${skipped?' ('+skipped+' duplicate'+(skipped!==1?'s':'')+' skipped)':''}`, 'success', 3500);
 }
 function exportJSON() {
     const blob=new Blob([JSON.stringify({transactions,quickAddTemplates,budgetTargets,visibleKpis,openingBalances,exportedAt:new Date().toISOString()},null,2)],{type:'application/json'});
@@ -2678,13 +2789,13 @@ function importJSON(event) {
     reader.onload=e=>{
         try {
             const data=JSON.parse(e.target.result);
-            if (!data.transactions){alert('Invalid backup file');return;}
+            if (!data.transactions){toast('Invalid backup file', 'error');return;}
             if (!confirm(`Replace all data with ${data.transactions.length} transactions from backup?`)) return;
             transactions=data.transactions; quickAddTemplates=data.quickAddTemplates||[]; budgetTargets=data.budgetTargets||{};
             if (data.visibleKpis) { visibleKpis=data.visibleKpis; KPI_DEFS.forEach(k=>{if(visibleKpis[k.id]===undefined)visibleKpis[k.id]=k.defaultOn;}); }
             if (data.openingBalances) openingBalances=data.openingBalances;
-            saveAll(); renderAll(); closeSettings(); alert('Backup restored.');
-        } catch { alert('Could not parse backup file.'); }
+            saveAll(); renderAll(); closeSettings(); toast('Backup restored', 'success');
+        } catch { toast('Could not parse backup file', 'error'); }
         event.target.value='';
     };
     reader.readAsText(file);
@@ -2958,8 +3069,11 @@ function renderWeeklySummary() {
     const isStandalone=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone;
     if (isIOS&&isSafari&&!isStandalone&&!localStorage.getItem('iosBannerDismissed')) {
         setTimeout(()=>{
+            // Don't show install banner if update banner is up — fixing an out-of-date install is wrong
+            if (document.getElementById('updateBanner')) return;
             const b=document.createElement('div');
-            b.style.cssText='position:fixed;bottom:72px;left:50%;transform:translateX(-50%);background:#1e40af;color:#fff;padding:0.875rem 1.125rem;border-radius:0.875rem;box-shadow:0 8px 24px rgba(0,0,0,0.2);z-index:300;font-family:DM Sans,sans-serif;font-size:0.8125rem;max-width:calc(100vw - 2rem);text-align:center;line-height:1.5;';
+            b.id='iosInstallBanner';
+            b.style.cssText='position:fixed;bottom:72px;left:50%;transform:translateX(-50%);background:var(--accent-hover);color:#fff;padding:0.875rem 1.125rem;border-radius:0.875rem;box-shadow:0 8px 24px rgba(0,0,0,0.2);z-index:300;font-family:DM Sans,sans-serif;font-size:0.8125rem;max-width:calc(100vw - 2rem);text-align:center;line-height:1.5;';
             b.innerHTML=`<div style="font-weight:700;margin-bottom:0.375rem;">📲 Add to Home Screen</div><div style="opacity:0.9;">Tap <strong>Share</strong> ⎙ then <strong>"Add to Home Screen"</strong></div><button onclick="localStorage.setItem('iosBannerDismissed','1');this.parentNode.remove()" style="margin-top:0.625rem;background:rgba(255,255,255,0.2);border:none;color:#fff;border-radius:0.5rem;padding:0.375rem 1rem;cursor:pointer;font-size:0.8rem;">Got it</button>`;
             document.body.appendChild(b);
         }, 2000);
@@ -2968,11 +3082,15 @@ function renderWeeklySummary() {
 
 function showUpdateBanner(newVersion) {
     if (document.getElementById('updateBanner')) return; // already showing
+    // If iOS install banner is up, hide it — update takes priority
+    const ios = document.getElementById('iosInstallBanner');
+    if (ios) ios.remove();
+
     const banner = document.createElement('div');
     banner.id = 'updateBanner';
     banner.style.cssText = `
         position:fixed; bottom:72px; left:50%; transform:translateX(-50%);
-        background:#1e40af; color:#fff; border-radius:0.875rem;
+        background:var(--accent-hover); color:#fff; border-radius:0.875rem;
         box-shadow:0 8px 24px rgba(0,0,0,0.2); z-index:300;
         font-family:'DM Sans',sans-serif; font-size:0.875rem;
         max-width:calc(100vw - 2rem); display:flex; align-items:center;
@@ -2981,7 +3099,7 @@ function showUpdateBanner(newVersion) {
     banner.innerHTML = `
         <span>🆕 Update available (${newVersion})</span>
         <button onclick="window.location.reload(true)"
-            style="background:#fff;color:#1e40af;border:none;border-radius:0.5rem;
+            style="background:#fff;color:var(--accent-hover);border:none;border-radius:0.5rem;
                    padding:0.375rem 0.875rem;font-weight:700;cursor:pointer;
                    font-size:0.8125rem;white-space:nowrap;">
             Refresh
