@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <!-- ── Version stamp — increment this (e.g. v11, v12) every time you push an update ── -->
-    <meta name="app-version" content="v18">    <!-- ── No-cache headers — tells browsers not to serve a stale cached copy ── -->
+    <meta name="app-version" content="v20">    <!-- ── No-cache headers — tells browsers not to serve a stale cached copy ── -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -779,7 +779,7 @@ textarea.field-input { height: auto; padding: 0.75rem 0.875rem; resize: none; li
 
 <script>
 // ── Version — must match the <meta name="app-version"> tag above ──
-const APP_VERSION = 'v18';
+const APP_VERSION = 'v20';
 
 // ── Local date helper — avoids UTC offset shifting date by a day ──
 const localDateStr = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -1099,7 +1099,14 @@ function switchTab(tabName) {
 
     if (tabName === 'history')    renderHistoryList();
     if (tabName === 'categories') renderCategoryList();
-    if (tabName === 'add')        renderQuickAdd();
+    if (tabName === 'add') {
+        renderQuickAdd();
+        // Default date to today if empty and not editing — saves a tap on every manual entry
+        const dateEl = document.getElementById('transactionDate');
+        if (!editingId && dateEl && !dateEl.value) {
+            dateEl.value = localDateStr(new Date());
+        }
+    }
 }
 
 // ══════════════════════════════════════════════════
@@ -1151,16 +1158,38 @@ function detectRecurring() {
         groups[key].months.add(t.date.substring(0,7));
         if (t.date > groups[key].lastDate) { groups[key].lastDate=t.date; groups[key].amount=t.amount; }
     });
-    const currentMonth = new Date().toISOString().substring(0,7);
-    const suggestions = Object.values(groups).filter(g =>
-        g.months.size>=2 && !g.months.has(currentMonth) && ['Bill','Loan','Savings','Investments'].includes(g.category)
-    );
+
+    // Determine what counts as "already logged in current period"
+    // Use pay period if configured, otherwise fall back to calendar month
+    let inCurrentPeriod;
+    let periodLabel;
+    if (hasPayPeriodData()) {
+        const { start, end } = getPayPeriod();
+        const startStr = localDateStr(start);
+        const endStr   = localDateStr(end);
+        const loggedKeys = new Set(
+            transactions
+                .filter(t => t.date >= startStr && t.date <= endStr)
+                .map(t => `${t.category}|||${t.description}`)
+        );
+        inCurrentPeriod = key => loggedKeys.has(key);
+        periodLabel = 'this pay period';
+    } else {
+        const currentMonth = new Date().toISOString().substring(0,7);
+        inCurrentPeriod = key => groups[key].months.has(currentMonth);
+        periodLabel = 'this month';
+    }
+
+    const suggestions = Object.values(groups).filter(g => {
+        const key = `${g.category}|||${g.name}`;
+        return g.months.size>=2 && !inCurrentPeriod(key) && ['Bill','Loan','Savings','Investments'].includes(g.category);
+    });
 
     ['recurringContainer','recurringAdd'].forEach(id => {
         const el = document.getElementById(id);
         if (!suggestions.length) { el.innerHTML=''; return; }
         el.innerHTML = `<div class="card">
-            <div class="card-header"><h2>🔄 Recurring — not yet logged this month</h2></div>
+            <div class="card-header"><h2>🔄 Recurring — not yet logged ${periodLabel}</h2></div>
             <div style="padding:1rem 1.25rem;display:flex;flex-wrap:wrap;gap:0.5rem;">
                 ${suggestions.slice(0,8).map(s =>
                     `<button class="template-pill ${CAT_PILL[s.category]||'pill-bill'}" onclick="prefillRecurring(${JSON.stringify(s.name)},'${s.category}',${Math.abs(s.amount)})">
@@ -1522,14 +1551,14 @@ function txRowHTML(t, editGoesTo) {
 // ══════════════════════════════════════════════════
 // HISTORY TAB — search, sort, filter
 // ══════════════════════════════════════════════════
-function renderHistoryList() {
+function renderHistoryList(cachedFiltered) {
     const list     = document.getElementById('transactionList');
     const count    = document.getElementById('historyCount');
     const query    = (document.getElementById('txSearch').value||'').toLowerCase().trim();
     const catFilter= document.getElementById('txCatFilter').value;
     const sort     = document.getElementById('txSortOrder').value;
 
-    let filtered = getFilteredTransactions();
+    let filtered = cachedFiltered || getFilteredTransactions();
     if (query)     filtered = filtered.filter(t => t.description?.toLowerCase().includes(query) || t.note?.toLowerCase().includes(query));
     if (catFilter) filtered = filtered.filter(t => t.category === catFilter);
 
@@ -1556,12 +1585,12 @@ function renderHistoryList() {
 // ══════════════════════════════════════════════════
 // CATEGORIES TAB
 // ══════════════════════════════════════════════════
-function renderCategoryList() {
+function renderCategoryList(cachedFiltered) {
     currentCatDetail = null;
     document.getElementById('catDetailView').classList.add('hidden');
     document.getElementById('catListCard').classList.remove('hidden');
 
-    const filtered = getFilteredTransactions();
+    const filtered = cachedFiltered || getFilteredTransactions();
     const cats = ['Income','Bill','Loan','Savings','Discretionary','Pension','Investments'];
 
     if (!transactions.length) {
@@ -1651,22 +1680,26 @@ function showCategoryDetail(catName) {
 // RENDER ALL
 // ══════════════════════════════════════════════════
 function renderAll() {
-    updateKPIs();
-    updateCharts();
+    // Compute filtered transactions ONCE per render and pass down — avoids
+    // re-running the filter 8+ times per render and ensures all consumers
+    // see a consistent snapshot.
+    const filtered = getFilteredTransactions();
+    updateKPIs(filtered);
+    updateCharts(filtered);
     detectRecurring();
     buildMonthStrip();
     renderDailyHero();
     renderWeeklySummary();
-    if (currentTab==='history')    renderHistoryList();
-    if (currentTab==='categories') currentCatDetail ? showCategoryDetail(currentCatDetail) : renderCategoryList();
+    if (currentTab==='history')    renderHistoryList(filtered);
+    if (currentTab==='categories') currentCatDetail ? showCategoryDetail(currentCatDetail) : renderCategoryList(filtered);
     if (currentTab==='add')        renderQuickAdd();
 }
 
 // ══════════════════════════════════════════════════
 // KPIs
 // ══════════════════════════════════════════════════
-function updateKPIs() {
-    const filtered = getFilteredTransactions();
+function updateKPIs(filtered) {
+    if (!filtered) filtered = getFilteredTransactions();
     const totalInc  = filtered.filter(t=>t.category==='Income').reduce((s,t)=>s+t.amount,0);
     const totalBill = filtered.filter(t=>t.category==='Bill').reduce((s,t)=>s+t.amount,0);
     const totalLoan = filtered.filter(t=>t.category==='Loan').reduce((s,t)=>s+t.amount,0);
@@ -1783,24 +1816,39 @@ function renderAlerts(kpis) {
 // ══════════════════════════════════════════════════
 // CHARTS
 // ══════════════════════════════════════════════════
-function updateCharts() { updateDailyChart(); updateCategoryChart(); updateMonthlyChart(); updateTopDiscretionaryChart(); }
+function updateCharts(filtered) {
+    if (!filtered) filtered = getFilteredTransactions();
+    updateDailyChart(filtered);
+    updateCategoryChart(filtered);
+    updateMonthlyChart(filtered);
+    updateTopDiscretionaryChart(filtered);
+}
 
-function updateDailyChart() {
-    const expenses=getFilteredTransactions().filter(t=>t.category!=='Income'&&t.category!=='Pension');
+function updateDailyChart(filtered) {
+    if (!filtered) filtered = getFilteredTransactions();
+    const expenses = filtered.filter(t=>t.category!=='Income'&&t.category!=='Pension');
     const daily={}; expenses.forEach(t=>{daily[t.date]=(daily[t.date]||0)+Math.abs(t.amount);});
     const dates=Object.keys(daily).sort();
     const labels=dates.map(d=>new Date(d).toLocaleDateString('en-IE',{month:'short',day:'numeric'}));
     const data=dates.map(d=>daily[d]), maxVal=data.length?Math.max(...data):100;
-    if (charts.daily) charts.daily.destroy();
-    charts.daily=new Chart(document.getElementById('dailyChart').getContext('2d'),{
-        type:'bar', data:{labels,datasets:[{label:'Daily Spending',data,backgroundColor:'rgba(124,58,237,0.7)',borderRadius:4}]},
-        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
-            scales:{x:{ticks:{font:CHART_FONT,maxRotation:45}},y:{beginAtZero:true,max:maxVal*1.1,ticks:{callback:v=>'€'+v.toFixed(0),font:CHART_FONT}}}}
-    });
+
+    if (charts.daily) {
+        charts.daily.data.labels = labels;
+        charts.daily.data.datasets[0].data = data;
+        charts.daily.options.scales.y.max = maxVal*1.1;
+        charts.daily.update();
+    } else {
+        charts.daily=new Chart(document.getElementById('dailyChart').getContext('2d'),{
+            type:'bar', data:{labels,datasets:[{label:'Daily Spending',data,backgroundColor:'rgba(124,58,237,0.7)',borderRadius:4}]},
+            options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+                scales:{x:{ticks:{font:CHART_FONT,maxRotation:45}},y:{beginAtZero:true,max:maxVal*1.1,ticks:{callback:v=>'€'+v.toFixed(0),font:CHART_FONT}}}}
+        });
+    }
 }
 
-function updateCategoryChart() {
-    const expenses=getFilteredTransactions().filter(t=>t.category!=='Income'&&t.category!=='Pension');
+function updateCategoryChart(filtered) {
+    if (!filtered) filtered = getFilteredTransactions();
+    const expenses = filtered.filter(t=>t.category!=='Income'&&t.category!=='Pension');
     let chartData={},colorPalette=[];
     if (chartView==='category') {
         expenses.forEach(t=>{chartData[t.category]=(chartData[t.category]||0)+Math.abs(t.amount);});
@@ -1811,59 +1859,110 @@ function updateCategoryChart() {
         colorPalette=Object.keys(chartData).map((_,i)=>`hsla(${i*step},70%,60%,0.7)`);
     }
     const labels=Object.keys(chartData),data=Object.values(chartData);
-    if (charts.category) charts.category.destroy();
-    charts.category=new Chart(document.getElementById('categoryChart').getContext('2d'),{
-        type:'pie', data:{labels,datasets:[{data,backgroundColor:colorPalette}]},
-        options:{responsive:true,maintainAspectRatio:false,
-            plugins:{legend:{position:'bottom',labels:{boxWidth:12,padding:8,font:CHART_FONT}},
-                tooltip:{callbacks:{
-                    label:ctx=>{const v=ctx.parsed,tot=ctx.dataset.data.reduce((a,b)=>a+b,0);return `€${v.toFixed(2)} (${((v/tot)*100).toFixed(1)}%)`;},
-                    afterLabel:ctx=>{const lbl=ctx.label;const count=chartView==='category'?expenses.filter(t=>t.category===lbl).length:expenses.filter(t=>(t.description||'Unnamed')===lbl).length;return `${count} transaction${count!==1?'s':''}`;}
-                }}}}
-    });
+
+    // Build a label→count map so the tooltip can look up counts at draw time
+    // rather than closing over a stale `expenses` from chart construction.
+    const labelCounts = {};
+    if (chartView==='category') {
+        expenses.forEach(t => { labelCounts[t.category] = (labelCounts[t.category]||0) + 1; });
+    } else {
+        expenses.forEach(t => { const d=t.description||'Unnamed'; labelCounts[d] = (labelCounts[d]||0) + 1; });
+    }
+
+    if (charts.category) {
+        charts.category.data.labels = labels;
+        charts.category.data.datasets[0].data = data;
+        charts.category.data.datasets[0].backgroundColor = colorPalette;
+        // Refresh the count-lookup the tooltip closure references
+        charts.category.$labelCounts = labelCounts;
+        charts.category.update();
+    } else {
+        charts.category=new Chart(document.getElementById('categoryChart').getContext('2d'),{
+            type:'pie', data:{labels,datasets:[{data,backgroundColor:colorPalette}]},
+            options:{responsive:true,maintainAspectRatio:false,
+                plugins:{legend:{position:'bottom',labels:{boxWidth:12,padding:8,font:CHART_FONT}},
+                    tooltip:{callbacks:{
+                        label:ctx=>{const v=ctx.parsed,tot=ctx.dataset.data.reduce((a,b)=>a+b,0);return `€${v.toFixed(2)} (${((v/tot)*100).toFixed(1)}%)`;},
+                        afterLabel:ctx=>{
+                            // Read from the chart instance, so updates are reflected
+                            const counts = ctx.chart.$labelCounts || {};
+                            const count = counts[ctx.label] || 0;
+                            return `${count} transaction${count!==1?'s':''}`;
+                        }
+                    }}}}
+        });
+        charts.category.$labelCounts = labelCounts;
+    }
 }
 
-function updateMonthlyChart() {
+function updateMonthlyChart(filtered) {
+    if (!filtered) filtered = getFilteredTransactions();
     const monthly={};
-    getFilteredTransactions().filter(t=>t.category!=='Pension').forEach(t=>{
+    filtered.filter(t=>t.category!=='Pension').forEach(t=>{
         const m=t.date.substring(0,7);
         if(!monthly[m]) monthly[m]={Income:0,Bill:0,Loan:0,Savings:0,Discretionary:0,Investments:0};
         monthly[m][t.category]=(monthly[m][t.category]||0)+Math.abs(t.amount);
     });
     const months=Object.keys(monthly).sort().slice(-6);
     const labels=months.map(m=>new Date(m+'-01').toLocaleDateString('en-IE',{month:'short',year:'numeric'}));
-    const datasets=[
-        {label:'Income',data:months.map(m=>monthly[m].Income||0),backgroundColor:CHART_COLORS.Income},
-        {label:'Bills',data:months.map(m=>monthly[m].Bill||0),backgroundColor:CHART_COLORS.Bill},
-        {label:'Loans',data:months.map(m=>monthly[m].Loan||0),backgroundColor:CHART_COLORS.Loan},
-        {label:'Savings',data:months.map(m=>monthly[m].Savings||0),backgroundColor:CHART_COLORS.Savings},
-        {label:'Discretionary',data:months.map(m=>monthly[m].Discretionary||0),backgroundColor:CHART_COLORS.Discretionary},
-        {label:'Investments',data:months.map(m=>monthly[m].Investments||0),backgroundColor:CHART_COLORS.Investments},
-    ];
-    const maxVal=Math.max(...datasets.flatMap(d=>d.data),0);
-    if (charts.monthly) charts.monthly.destroy();
-    charts.monthly=new Chart(document.getElementById('monthlyChart').getContext('2d'),{
-        type:'bar', data:{labels,datasets},
-        options:{responsive:true,maintainAspectRatio:false,
-            plugins:{legend:{position:'bottom',labels:{boxWidth:10,padding:6,font:CHART_FONT}}},
-            scales:{x:{ticks:{font:CHART_FONT}},y:{beginAtZero:true,max:maxVal*1.1,ticks:{callback:v=>'€'+v.toFixed(0),font:CHART_FONT}}}}
-    });
+    const seriesData = {
+        Income:        months.map(m=>monthly[m].Income||0),
+        Bill:          months.map(m=>monthly[m].Bill||0),
+        Loan:          months.map(m=>monthly[m].Loan||0),
+        Savings:       months.map(m=>monthly[m].Savings||0),
+        Discretionary: months.map(m=>monthly[m].Discretionary||0),
+        Investments:   months.map(m=>monthly[m].Investments||0),
+    };
+    const maxVal = Math.max(...Object.values(seriesData).flat(), 0);
+
+    if (charts.monthly) {
+        charts.monthly.data.labels = labels;
+        // Datasets are in a stable order — update by index
+        const order = ['Income','Bill','Loan','Savings','Discretionary','Investments'];
+        order.forEach((k, i) => { charts.monthly.data.datasets[i].data = seriesData[k]; });
+        charts.monthly.options.scales.y.max = maxVal*1.1;
+        charts.monthly.update();
+    } else {
+        const datasets = [
+            {label:'Income',       data:seriesData.Income,        backgroundColor:CHART_COLORS.Income},
+            {label:'Bills',        data:seriesData.Bill,          backgroundColor:CHART_COLORS.Bill},
+            {label:'Loans',        data:seriesData.Loan,          backgroundColor:CHART_COLORS.Loan},
+            {label:'Savings',      data:seriesData.Savings,       backgroundColor:CHART_COLORS.Savings},
+            {label:'Discretionary',data:seriesData.Discretionary, backgroundColor:CHART_COLORS.Discretionary},
+            {label:'Investments',  data:seriesData.Investments,   backgroundColor:CHART_COLORS.Investments},
+        ];
+        charts.monthly=new Chart(document.getElementById('monthlyChart').getContext('2d'),{
+            type:'bar', data:{labels,datasets},
+            options:{responsive:true,maintainAspectRatio:false,
+                plugins:{legend:{position:'bottom',labels:{boxWidth:10,padding:6,font:CHART_FONT}}},
+                scales:{x:{ticks:{font:CHART_FONT}},y:{beginAtZero:true,max:maxVal*1.1,ticks:{callback:v=>'€'+v.toFixed(0),font:CHART_FONT}}}}
+        });
+    }
 }
 
-function updateTopDiscretionaryChart() {
+function updateTopDiscretionaryChart(filtered) {
+    if (!filtered) filtered = getFilteredTransactions();
     const totals={};
-    getFilteredTransactions().filter(t=>t.category==='Discretionary').forEach(t=>{const d=t.description||'Unnamed';totals[d]=(totals[d]||0)+Math.abs(t.amount);});
+    filtered.filter(t=>t.category==='Discretionary').forEach(t=>{const d=t.description||'Unnamed';totals[d]=(totals[d]||0)+Math.abs(t.amount);});
     const sorted=Object.entries(totals).sort((a,b)=>b[1]-a[1]).slice(0,10);
     const labels=sorted.map(s=>s[0]),data=sorted.map(s=>s[1]),maxVal=data.length?Math.max(...data):100;
     const colors=['rgba(126,34,206,0.85)','rgba(139,92,246,0.8)','rgba(147,51,234,0.75)','rgba(167,139,250,0.75)','rgba(196,181,253,0.7)','rgba(192,132,252,0.7)','rgba(216,180,254,0.65)','rgba(221,214,254,0.65)','rgba(237,233,254,0.6)','rgba(245,243,255,0.6)'];
-    if (charts.topDiscretionary) charts.topDiscretionary.destroy();
-    charts.topDiscretionary=new Chart(document.getElementById('topDiscretionaryChart').getContext('2d'),{
-        type:'bar', data:{labels,datasets:[{label:'Total Spent',data,backgroundColor:colors.slice(0,data.length),borderRadius:4}]},
-        options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
-            plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`€${ctx.parsed.x.toFixed(2)}`}}},
-            scales:{x:{beginAtZero:true,max:maxVal*1.1,ticks:{callback:v=>'€'+v.toFixed(0),font:CHART_FONT}},
-                y:{ticks:{font:CHART_FONT,callback:function(v){const l=this.getLabelForValue(v);return l.length>18?l.substring(0,16)+'…':l;}}}}}
-    });
+
+    if (charts.topDiscretionary) {
+        charts.topDiscretionary.data.labels = labels;
+        charts.topDiscretionary.data.datasets[0].data = data;
+        charts.topDiscretionary.data.datasets[0].backgroundColor = colors.slice(0, data.length);
+        charts.topDiscretionary.options.scales.x.max = maxVal*1.1;
+        charts.topDiscretionary.update();
+    } else {
+        charts.topDiscretionary=new Chart(document.getElementById('topDiscretionaryChart').getContext('2d'),{
+            type:'bar', data:{labels,datasets:[{label:'Total Spent',data,backgroundColor:colors.slice(0,data.length),borderRadius:4}]},
+            options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+                plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`€${ctx.parsed.x.toFixed(2)}`}}},
+                scales:{x:{beginAtZero:true,max:maxVal*1.1,ticks:{callback:v=>'€'+v.toFixed(0),font:CHART_FONT}},
+                    y:{ticks:{font:CHART_FONT,callback:function(v){const l=this.getLabelForValue(v);return l.length>18?l.substring(0,16)+'…':l;}}}}}
+        });
+    }
 }
 
 function switchChartView(view) {
@@ -1894,19 +1993,51 @@ function clearFilters() {
 
 function exportCSV() {
     const filtered=getFilteredTransactions(); if (!filtered.length){alert('No transactions to export');return;}
-    const csv=[['Date','Category','Subcategory','Description','Amount','Note'],...filtered.map(t=>[t.date,t.category,t.subcat||'',t.description,t.amount,t.note||''])]
-        .map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');
+    // RFC 4180: wrap in quotes if contains comma/quote/newline; double internal quotes
+    const csvField = v => {
+        const s = String(v ?? '');
+        return /[",\n\r]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s;
+    };
+    const rows = [
+        ['Date','Category','Subcategory','Description','Amount','Note'],
+        ...filtered.map(t=>[t.date,t.category,t.subcat||'',t.description,t.amount,t.note||''])
+    ];
+    const csv = rows.map(r=>r.map(csvField).join(',')).join('\r\n');
     const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(new Blob([csv],{type:'text/csv'})),download:`budget-tracker-${new Date().toISOString().split('T')[0]}.csv`});
     a.click(); URL.revokeObjectURL(a.href);
+}
+
+// RFC 4180 CSV row parser — handles quoted fields with commas, escaped quotes, CRLF
+function parseCSVRow(line) {
+    const out = [];
+    let cur = '', inQ = false, i = 0;
+    while (i < line.length) {
+        const ch = line[i];
+        if (inQ) {
+            if (ch === '"') {
+                if (line[i+1] === '"') { cur += '"'; i += 2; continue; }
+                inQ = false; i++; continue;
+            }
+            cur += ch; i++;
+        } else {
+            if (ch === '"' && cur === '') { inQ = true; i++; continue; }
+            if (ch === ',') { out.push(cur); cur = ''; i++; continue; }
+            cur += ch; i++;
+        }
+    }
+    out.push(cur);
+    return out;
 }
 
 function importCSV(event) {
     const file=event.target.files[0]; if (!file) return;
     const reader=new FileReader();
     reader.onload=e=>{
-        const lines=e.target.result.split('\n').filter(l=>l.trim()).slice(1);
+        // Normalise line endings, drop header row
+        const text = e.target.result.replace(/\r\n?/g, '\n');
+        const lines = text.split('\n').filter(l=>l.trim()).slice(1);
         const imported=lines.map(line=>{
-            const parts=line.split(',').map(c=>c.replace(/"/g,'').trim());
+            const parts = parseCSVRow(line).map(c => c.trim());
             const [date,category,subcat,description,amount,note]=parts;
             let amt=parseFloat(amount);
             amt=category!=='Income'?-Math.abs(amt):Math.abs(amt);
@@ -2688,21 +2819,21 @@ function renderDailyHero() {
 function renderWeeklySummary() {
     const container = document.getElementById('weeklySummaryContainer');
 
-    // Build last 5 weeks (Mon–Sun), always unfiltered
+    // Build last 5 calendar weeks (Mon–Sun)
     const weeks = [];
     const now = new Date(); now.setHours(0,0,0,0);
-    // Find most recent Sunday
-    let weekEnd = new Date(now);
-    weekEnd.setDate(weekEnd.getDate() - ((weekEnd.getDay() + 0) % 7)); // end = last Sunday
-    if (weekEnd > now) weekEnd.setDate(weekEnd.getDate() - 7);
-    // actually cap end at today so current week is partial
-    weekEnd = new Date(now);
+
+    // Anchor: Monday of the current calendar week
+    // getDay() returns 0=Sun..6=Sat; convert so Monday=0
+    const dayIdx = (now.getDay() + 6) % 7;
+    const thisMonday = new Date(now);
+    thisMonday.setDate(thisMonday.getDate() - dayIdx);
 
     for (let w = 0; w < 5; w++) {
-        const end   = new Date(weekEnd); end.setDate(end.getDate() - w*7);
-        const start = new Date(end);     start.setDate(start.getDate() - 6);
-        const endStr   = localDateStr(end);
+        const start = new Date(thisMonday); start.setDate(start.getDate() - w*7);
+        const end   = new Date(start);      end.setDate(end.getDate() + 6);
         const startStr = localDateStr(start);
+        const endStr   = localDateStr(end);
 
         const disc = transactions
             .filter(t => t.category==='Discretionary' && t.date >= startStr && t.date <= endStr)
@@ -2866,4 +2997,5 @@ function showUpdateBanner(newVersion) {
 </script>
 </body>
 </html>
+
 
