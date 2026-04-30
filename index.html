@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <!-- ── Version stamp — increment this (e.g. v11, v12) every time you push an update ── -->
-    <meta name="app-version" content="v21">    <!-- ── No-cache headers — tells browsers not to serve a stale cached copy ── -->
+    <meta name="app-version" content="v24">    <!-- ── No-cache headers — tells browsers not to serve a stale cached copy ── -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -15,9 +15,16 @@
     <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='42' fill='%232563eb'/%3E%3Ctext x='96' y='130' font-size='110' text-anchor='middle'%3E💰%3C/text%3E%3C/svg%3E">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
+    /* Typography */
+    --font-display: 'Instrument Serif', Georgia, serif;
+    --font-body:    'Geist', 'DM Sans', system-ui, sans-serif;
+    --font-mono:    'Geist Mono', 'DM Mono', ui-monospace, monospace;
+
     /* Brand category accents */
     --income:  #16a34a; --bill:    #dc2626; --loan:    #ea580c;
     --savings: #2563eb; --disc:    #7c3aed; --pension: #4338ca; --invest:  #0d9488;
@@ -79,7 +86,7 @@
     --cat-invest-bg:        #042f2e; --cat-invest-bg-soft:        #021917; --cat-invest-border:        #115e59; --cat-invest-fg:        #5eead4;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100dvh; transition: background 0.2s, color 0.2s; }
+body { font-family: var(--font-body); background: var(--bg); color: var(--text); min-height: 100dvh; transition: background 0.2s, color 0.2s; }
 
 /* ── Fixed header ── */
 .app-header {
@@ -88,7 +95,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     display: flex; align-items: center; justify-content: space-between;
     padding: calc(0.75rem + env(safe-area-inset-top)) 1.25rem 0.75rem;
 }
-.app-header h1 { font-size: 1.0625rem; font-weight: 700; letter-spacing: -0.02em; }
+.app-header h1 { font-family: var(--font-display); font-size: 1.5rem; font-weight: 400; letter-spacing: -0.02em; line-height: 1; }
 .header-spacer { height: calc(56px + env(safe-area-inset-top)); }
 
 /* ── Settings btn (single icon in header) ── */
@@ -137,7 +144,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: 1rem; overflow: hidden; }
 .card-body { padding: 1.25rem; }
 .card-header { padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
-.card-header h2 { font-size: 0.9375rem; font-weight: 700; letter-spacing: -0.01em; }
+.card-header h2 { font-family: var(--font-display); font-size: 1.25rem; font-weight: 400; letter-spacing: -0.01em; line-height: 1.2; }
 
 /* ── KPI grid ── */
 .kpi-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 0.75rem; }
@@ -176,8 +183,23 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 /* Make sure label/value/sub stay above the gradient */
 .kpi-label, .kpi-value, .kpi-sub { position: relative; z-index: 2; }
 .kpi-label { font-size: 0.6875rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.375rem; }
-.kpi-value { font-family: 'DM Mono', monospace; font-size: 1.25rem; font-weight: 500; letter-spacing: -0.02em; line-height: 1.2; }
+.kpi-value { font-family: var(--font-mono); font-size: 1.25rem; font-weight: 500; letter-spacing: -0.02em; line-height: 1.2; font-variant-numeric: tabular-nums; }
 .kpi-sub   { font-size: 0.6875rem; color: var(--muted); margin-top: 0.25rem; }
+
+/* Primary KPI cards — larger, span 2 columns; numbers stay mono for ledger-style alignment */
+.kpi-card.primary { grid-column: span 2; padding: 1.25rem; }
+.kpi-card.primary .kpi-value {
+    font-size: 1.875rem; font-weight: 500;
+    letter-spacing: -0.02em; line-height: 1.1;
+    margin-top: 0.125rem;
+}
+.kpi-card.primary .kpi-label { font-size: 0.75rem; }
+.kpi-card.primary .kpi-sub   { margin-top: 0.5rem; font-size: 0.75rem; }
+.kpi-card.primary::after { height: 80%; opacity: 0.7; }
+@media (min-width: 768px) {
+    /* On 4-col grids, primaries take 2 of 4 — meaning two primaries fit one row */
+    .kpi-card.primary { grid-column: span 2; }
+}
 
 /* ── Budget progress bar ── */
 .budget-bar-track { height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; margin-top: 0.625rem; position: relative; z-index: 2; }
@@ -204,7 +226,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .daily-hero.hero-none { background: var(--surface); border: 1px solid var(--border); color: var(--text); }
 .hero-left { flex: 1; min-width: 0; }
 .hero-label { font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; opacity: 0.8; margin-bottom: 0.375rem; }
-.hero-amount { font-family: 'DM Mono', monospace; font-size: 2.25rem; font-weight: 500; letter-spacing: -0.03em; line-height: 1; }
+.hero-amount { font-family: var(--font-mono); font-size: 2.25rem; font-weight: 500; letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums; }
 .hero-sub { font-size: 0.75rem; opacity: 0.8; margin-top: 0.375rem; }
 .hero-right { text-align: right; flex-shrink: 0; }
 .hero-days { font-size: 0.8125rem; opacity: 0.85; font-weight: 600; }
@@ -215,7 +237,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .week-row:last-child { border-bottom: none; }
 .week-label { font-size: 0.8125rem; font-weight: 600; flex: 1; min-width: 0; }
 .week-sub   { font-size: 0.6875rem; color: var(--muted); margin-top: 0.1rem; }
-.week-amount { font-family: 'DM Mono', monospace; font-size: 0.9375rem; font-weight: 500; flex-shrink: 0; }
+.week-amount { font-family: var(--font-mono); font-size: 0.9375rem; font-weight: 500; flex-shrink: 0; font-variant-numeric: tabular-nums; }
 .week-delta { font-size: 0.75rem; font-weight: 600; flex-shrink: 0; width: 56px; text-align: right; }
 .week-delta.up   { color: var(--bill); }
 .week-delta.down { color: var(--income); }
@@ -269,7 +291,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .field-input {
     width: 100%; height: 48px; padding: 0 0.875rem;
     border: 1.5px solid var(--border); border-radius: 0.625rem;
-    font-family: 'DM Sans', sans-serif; font-size: 0.9375rem;
+    font-family: var(--font-body); font-size: 0.9375rem;
     background: var(--surface); color: var(--text);
     transition: border-color 0.15s, box-shadow 0.15s; -webkit-appearance: none;
 }
@@ -285,7 +307,7 @@ textarea.field-input { height: auto; padding: 0.75rem 0.875rem; resize: none; li
 .note-panel { margin-top: 0.5rem; }
 
 /* ── Buttons ── */
-.btn { display:inline-flex; align-items:center; justify-content:center; gap:0.375rem; height:48px; padding:0 1.25rem; border-radius:0.625rem; font-family:'DM Sans',sans-serif; font-size:0.9375rem; font-weight:600; cursor:pointer; border:none; transition:all 0.15s; white-space:nowrap; }
+.btn { display:inline-flex; align-items:center; justify-content:center; gap:0.375rem; height:48px; padding:0 1.25rem; border-radius:0.625rem; font-family:var(--font-body); font-size:0.9375rem; font-weight:600; cursor:pointer; border:none; transition:all 0.15s; white-space:nowrap; }
 .btn-primary   { background: var(--accent); color: #fff; }
 .btn-primary:hover { background: var(--accent-hover); }
 .btn-secondary { background: var(--bg); color: var(--text); border: 1.5px solid var(--border); }
@@ -318,11 +340,12 @@ textarea.field-input { height: auto; padding: 0.75rem 0.875rem; resize: none; li
 .tx-row { display:flex; align-items:center; gap:0.75rem; padding:0.875rem 1.25rem; border-bottom:1px solid var(--border); transition:background 0.1s; }
 .tx-row:last-child { border-bottom: none; }
 .tx-row:hover { background: var(--bg); }
-.tx-icon { width:38px; height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0; }
+.tx-icon { width:38px; height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.tx-icon svg { width:18px; height:18px; }
 .tx-desc { font-size:0.9rem; font-weight:600; color:var(--text); }
 .tx-meta { font-size:0.75rem; color:var(--muted); margin-top:0.1rem; }
 .tx-note { font-size:0.7rem; color:var(--muted); font-style:italic; margin-top:0.15rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:180px; }
-.tx-amount { font-family:'DM Mono',monospace; font-size:0.9375rem; font-weight:500; margin-left:auto; flex-shrink:0; }
+.tx-amount { font-family:var(--font-mono); font-size:0.9375rem; font-weight:500; margin-left:auto; flex-shrink:0; font-variant-numeric: tabular-nums; }
 .tx-actions { display:flex; gap:0.25rem; flex-shrink:0; }
 .tx-action-btn { width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; border:none; background:var(--bg); cursor:pointer; color:var(--muted); transition:all 0.15s; }
 .tx-action-btn.edit:hover { background:var(--surface-hover); color:var(--accent); }
@@ -359,11 +382,12 @@ textarea.field-input { height: auto; padding: 0.75rem 0.875rem; resize: none; li
 .cat-list-item { display:flex; align-items:center; gap:0.875rem; padding:1rem 1.25rem; border-bottom:1px solid var(--border); cursor:pointer; transition:background 0.1s; }
 .cat-list-item:last-child { border-bottom:none; }
 .cat-list-item:hover { background:var(--bg); }
-.cat-list-icon { width:42px; height:42px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:1.25rem; flex-shrink:0; }
+.cat-list-icon { width:42px; height:42px; border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.cat-list-icon svg { width:20px; height:20px; }
 .cat-list-info { flex:1; min-width:0; }
 .cat-list-name  { font-size:0.9375rem; font-weight:700; }
 .cat-list-sub   { font-size:0.75rem; color:var(--muted); margin-top:0.125rem; }
-.cat-list-amount{ font-family:'DM Mono',monospace; font-size:0.9375rem; font-weight:600; flex-shrink:0; }
+.cat-list-amount{ font-family:var(--font-mono); font-size:0.9375rem; font-weight:600; flex-shrink:0; font-variant-numeric: tabular-nums; }
 .cat-list-arrow { color:var(--muted); flex-shrink:0; margin-left:0.25rem; }
 
 /* ── Settings modal ── */
@@ -397,7 +421,7 @@ textarea.field-input { height: auto; padding: 0.75rem 0.875rem; resize: none; li
 .settings-row-desc  { font-size:0.75rem; color:var(--muted); margin-top:0.1rem; }
 
 /* ── Target input ── */
-.target-input { width:110px; height:40px; padding:0 0.75rem; border:1.5px solid var(--border); border-radius:0.5rem; font-family:'DM Mono',monospace; font-size:0.9rem; background:var(--surface); color:var(--text); text-align:right; }
+.target-input { width:110px; height:40px; padding:0 0.75rem; border:1.5px solid var(--border); border-radius:0.5rem; font-family:var(--font-mono); font-size:0.9rem; background:var(--surface); color:var(--text); text-align:right; font-variant-numeric: tabular-nums; }
 .target-input:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(37,99,235,0.1); }
 
 /* ── iOS toggle switch ── */
@@ -471,7 +495,7 @@ textarea.field-input { height: auto; padding: 0.75rem 0.875rem; resize: none; li
 .import-row-desc { flex:1; min-width:0; }
 .import-desc-text { font-size:0.875rem; font-weight:600; color:var(--text); word-break:break-word; }
 .import-meta { font-size:0.75rem; color:var(--muted); margin-top:0.125rem; }
-.import-amount { font-family:'DM Mono',monospace; font-size:0.9375rem; font-weight:600; flex-shrink:0; }
+.import-amount { font-family:var(--font-mono); font-size:0.9375rem; font-weight:600; flex-shrink:0; font-variant-numeric: tabular-nums; }
 .import-row-controls { display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; }
 .import-row-controls select { flex:1; min-width:130px; height:38px; font-size:0.8125rem; }
 .import-row-controls input { flex:1; min-width:100px; height:38px; font-size:0.8125rem; padding:0 0.625rem; }
@@ -872,7 +896,7 @@ textarea.field-input { height: auto; padding: 0.75rem 0.875rem; resize: none; li
 
 <script>
 // ── Version — must match the <meta name="app-version"> tag above ──
-const APP_VERSION = 'v21';
+const APP_VERSION = 'v24';
 
 // ── Local date helper — avoids UTC offset shifting date by a day ──
 const localDateStr = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -928,12 +952,12 @@ let visibleKpis      = {};
 
 // ── KPI definitions ──
 const KPI_DEFS = [
-    { id:'totalIncome',        label:'Total Income',       desc:'Sum of all income transactions',              colorClass:'income',    defaultOn:true  },
+    { id:'totalIncome',        label:'Total Income',       desc:'Sum of all income transactions',              colorClass:'income',    defaultOn:true,  primary:true  },
     { id:'fixedExpenses',      label:'Fixed Expenses',     desc:'Bills + Loans combined',                      colorClass:'bills',     defaultOn:true  },
     { id:'totalSavings',       label:'Total Savings',      desc:'Sum of savings contributions',                colorClass:'savings',   defaultOn:true  },
     { id:'totalDiscretionary', label:'Discretionary',      desc:'Flexible / variable spending',                colorClass:'disc',      defaultOn:true  },
-    { id:'availableBudget',    label:'Available Budget',   desc:'Income minus fixed expenses',                 colorClass:'avail',     defaultOn:true  },
-    { id:'remainingBudget',    label:'Remaining Budget',   desc:'Income minus all spending (excl. pension)',   colorClass:'remain-pos',defaultOn:true  },
+    { id:'availableBudget',    label:'Available Budget',   desc:'Income minus fixed expenses',                 colorClass:'avail',     defaultOn:true,  primary:true  },
+    { id:'remainingBudget',    label:'Remaining Budget',   desc:'Income minus all spending (excl. pension)',   colorClass:'remain-pos',defaultOn:true,  primary:true  },
     { id:'savingsRate',        label:'Savings Rate',       desc:'(Savings + Investments) ÷ Income',            colorClass:'saverate',  defaultOn:true  },
     { id:'totalInvestments',   label:'Investments',        desc:'Sum of investment contributions',             colorClass:'invest',    defaultOn:true  },
     { id:'totalPension',       label:'Pension',            desc:'Pre-tax pension contributions',               colorClass:'pension',   defaultOn:false },
@@ -949,18 +973,42 @@ const KPI_DEFS = [
 
 // ── Category config ──
 const CAT_ICON   = { Income:'💵', Bill:'🧾', Loan:'🏦', Savings:'💰', Discretionary:'🛍️', Pension:'👴', Investments:'📈' };
+
+// Lucide SVG icons — used in tx rows, category lists, badges, hero, etc.
+// Stroke uses currentColor so each icon picks up the colour of its container.
+const SVG_PROPS = 'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
+const svgWrap = (size, body) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" ${SVG_PROPS}>${body}</svg>`;
+// Lucide icon paths
+const ICON_PATHS = {
+    Income:        '<path d="M12 2v20"/><path d="m17 7-5-5-5 5"/><circle cx="12" cy="12" r="10"/>',           // arrow-up-circle (money in)
+    Bill:          '<path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 17.5v-11"/>',  // receipt
+    Loan:          '<line x1="3" x2="21" y1="22" y2="22"/><line x1="6" x2="6" y1="18" y2="11"/><line x1="10" x2="10" y1="18" y2="11"/><line x1="14" x2="14" y1="18" y2="11"/><line x1="18" x2="18" y1="18" y2="11"/><polygon points="12 2 20 7 4 7"/>',  // landmark
+    Savings:       '<path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8 0 3 2 4.5V20h4v-2h3v2h4v-4c1-.5 1.7-1 2-2h2v-4h-2c0-1-.5-1.5-1-2V5z"/><path d="M2 9v1c0 1.1.9 2 2 2h1"/><path d="M16 11h.01"/>', // piggy-bank
+    Discretionary: '<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>', // shopping-bag
+    Pension:       '<path d="M22 12a10.06 10.06 1 0 0-20 0Z"/><path d="M12 12v8a2 2 0 0 0 4 0"/><path d="M12 2v1"/>', // umbrella
+    Investments:   '<polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>', // trending-up
+};
+const CAT_SVG = Object.fromEntries(Object.entries(ICON_PATHS).map(([k,v]) => [k, svgWrap(20, v)]));
+const catSvg = (category, size = 20) => svgWrap(size, ICON_PATHS[category] || '');
+
+// Per-category foreground colour (CSS var) for icon strokes against tinted backgrounds
+const CAT_FG_VAR = {
+    Income:'var(--cat-income-fg)', Bill:'var(--cat-bill-fg)', Loan:'var(--cat-loan-fg)',
+    Savings:'var(--cat-savings-fg)', Discretionary:'var(--cat-disc-fg)',
+    Pension:'var(--cat-pension-fg)', Investments:'var(--cat-invest-fg)'
+};
 const CAT_PILL   = { Income:'pill-income', Bill:'pill-bill', Loan:'pill-loan', Savings:'pill-savings', Discretionary:'pill-disc', Pension:'pill-pension', Investments:'pill-invest' };
 const CAT_BG     = { Income:'var(--cat-income-bg)', Bill:'var(--cat-bill-bg)', Loan:'var(--cat-loan-bg)', Savings:'var(--cat-savings-bg)', Discretionary:'var(--cat-disc-bg)', Pension:'var(--cat-pension-bg)', Investments:'var(--cat-invest-bg)' };
 const CAT_COLOR  = { Income:'var(--income)', Bill:'var(--bill)', Loan:'var(--loan)', Savings:'var(--savings)', Discretionary:'var(--disc)', Pension:'var(--pension)', Investments:'var(--invest)' };
 const CAT_GRAD   = { Income:'linear-gradient(135deg,var(--cat-income-bg-soft),var(--cat-income-bg))', Bill:'linear-gradient(135deg,var(--cat-bill-bg-soft),var(--cat-bill-bg))', Loan:'linear-gradient(135deg,var(--cat-loan-bg-soft),var(--cat-loan-bg))', Savings:'linear-gradient(135deg,var(--cat-savings-bg-soft),var(--cat-savings-bg))', Discretionary:'linear-gradient(135deg,var(--cat-disc-bg-soft),var(--cat-disc-bg))', Pension:'linear-gradient(135deg,var(--cat-pension-bg-soft),var(--cat-pension-bg))', Investments:'linear-gradient(135deg,var(--cat-invest-bg-soft),var(--cat-invest-bg))' };
 const CHART_COLORS = { Income:'rgba(22,163,74,0.7)', Bill:'rgba(220,38,38,0.7)', Loan:'rgba(234,88,12,0.7)', Savings:'rgba(37,99,235,0.7)', Discretionary:'rgba(124,58,237,0.7)', Investments:'rgba(13,148,136,0.7)' };
-const CHART_FONT   = { family:'DM Sans', size:11 };
+const CHART_FONT   = { family:'Geist, DM Sans, system-ui', size:11 };
 const TARGET_CATS  = ['Discretionary','Savings','Investments','Bill','Loan'];
 const BALANCE_CATS = [
-    { key:'Savings', label:'Savings', icon:'💰' },
-    { key:'Investments', label:'Investments', icon:'📈' },
-    { key:'Pension', label:'Pension', icon:'👴' },
-    { key:'General', label:'General / Other', icon:'🏦' },
+    { key:'Savings',     label:'Savings' },
+    { key:'Investments', label:'Investments' },
+    { key:'Pension',     label:'Pension' },
+    { key:'General',     label:'General / Other' },
 ];
 
 // ══════════════════════════════════════════════════
@@ -985,23 +1033,30 @@ function openSettings() {
     document.getElementById('targetRows').innerHTML = TARGET_CATS.map(cat => `
         <div class="settings-row">
             <div class="settings-row-info">
-                <div class="settings-row-label">${CAT_ICON[cat]} ${cat}</div>
+                <div class="settings-row-label" style="display:flex;align-items:center;gap:0.5rem;">
+                    <span style="color:${CAT_FG_VAR[cat]};display:inline-flex;">${catSvg(cat, 16)}</span>${cat}
+                </div>
             </div>
             <span style="color:var(--muted);font-size:0.875rem;margin-right:0.25rem;">€</span>
             <input type="number" class="target-input" id="target-${cat}" step="1" min="0"
                 placeholder="No limit" value="${budgetTargets[cat]||''}">
         </div>`).join('');
 
-    document.getElementById('balanceRows').innerHTML = BALANCE_CATS.map(c => `
+    document.getElementById('balanceRows').innerHTML = BALANCE_CATS.map(c => {
+        const iconSvg = ICON_PATHS[c.key]
+            ? `<span style="color:${CAT_FG_VAR[c.key]};display:inline-flex;">${catSvg(c.key, 16)}</span>`
+            : `<span style="color:var(--muted);display:inline-flex;">${svgWrap(16, '<rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/>')}</span>`;
+        return `
         <div class="settings-row">
             <div class="settings-row-info">
-                <div class="settings-row-label">${c.icon} ${c.label}</div>
+                <div class="settings-row-label" style="display:flex;align-items:center;gap:0.5rem;">${iconSvg}${c.label}</div>
                 <div class="settings-row-desc">Not in transactions or charts</div>
             </div>
             <span style="color:var(--muted);font-size:0.875rem;margin-right:0.25rem;">€</span>
             <input type="number" class="target-input" id="balance-${c.key}" step="0.01" min="0"
                 placeholder="0.00" value="${openingBalances[c.key]||''}">
-        </div>`).join('');
+        </div>`;
+    }).join('');
 
     document.getElementById('settingsModal').classList.remove('hidden');
 }
@@ -1301,20 +1356,39 @@ function detectRecurring() {
         const el = document.getElementById(id);
         if (!suggestions.length) { el.innerHTML=''; return; }
         el.innerHTML = `<div class="card">
-            <div class="card-header"><h2>🔄 Recurring — not yet logged ${periodLabel}</h2></div>
-            <div style="padding:1rem 1.25rem;display:flex;flex-wrap:wrap;gap:0.5rem;">
-                ${suggestions.slice(0,8).map(s =>
-                    `<button class="template-pill ${CAT_PILL[s.category]||'pill-bill'}" onclick="prefillRecurring(${JSON.stringify(s.name)},'${s.category}',${Math.abs(s.amount)})">
+            <div class="card-header"><h2>Recurring — not yet logged ${periodLabel}</h2></div>
+            <div class="recurring-pills" style="padding:1rem 1.25rem;display:flex;flex-wrap:wrap;gap:0.5rem;">
+                ${suggestions.slice(0,8).map((s,i) =>
+                    `<button class="template-pill ${CAT_PILL[s.category]||'pill-bill'}"
+                        data-recurring-idx="${i}"
+                        data-recurring-name="${escapeHtml(s.name)}"
+                        data-recurring-category="${s.category}"
+                        data-recurring-amount="${Math.abs(s.amount)}">
                         ${escapeHtml(s.name)} <span style="opacity:0.6;margin-left:0.3rem;">€${Math.abs(s.amount).toFixed(2)}</span>
                     </button>`).join('')}
             </div>
         </div>`;
+
+        // Event delegation — survives re-renders, handles any name including special chars
+        const container = el.querySelector('.recurring-pills');
+        if (container && !container.dataset.wired) {
+            container.dataset.wired = '1';
+            container.addEventListener('click', e => {
+                const btn = e.target.closest('[data-recurring-idx]');
+                if (!btn) return;
+                prefillRecurring(
+                    btn.dataset.recurringName,
+                    btn.dataset.recurringCategory,
+                    parseFloat(btn.dataset.recurringAmount)
+                );
+            });
+        }
     });
 }
 
 function prefillRecurring(name, category, amount) {
     switchTab('add');
-    document.getElementById('transactionDate').valueAsDate = new Date();
+    document.getElementById('transactionDate').value      = localDateStr(new Date());
     document.getElementById('transactionCategory').value   = category;
     document.getElementById('transactionAmount').value     = amount;
     document.getElementById('transactionDescription').value = name;
@@ -1641,7 +1715,7 @@ function txRowHTML(t, editGoesTo) {
     const safeId = String(t.id).replace(/'/g, "\\'");
     const editFn = `editTransaction('${safeId}')`;
     return `<div class="tx-row">
-        <div class="tx-icon" style="background:${CAT_BG[t.category]};">${CAT_ICON[t.category]}</div>
+        <div class="tx-icon" style="background:${CAT_BG[t.category]};color:${CAT_FG_VAR[t.category]};">${catSvg(t.category, 18)}</div>
         <div style="flex:1;min-width:0;">
             <div class="tx-desc">${escapeHtml(t.description)}</div>
             <div class="tx-meta">${new Date(t.date).toLocaleDateString('en-IE')} &nbsp;·&nbsp; <span class="cat-badge cat-${t.category}">${t.category}</span>${t.subcat?`<span class="subcat-badge">${escapeHtml(t.subcat)}</span>`:''}</div>
@@ -1718,7 +1792,7 @@ function renderCategoryList(cachedFiltered) {
         const total = catTx.reduce((s,t)=>s+Math.abs(t.amount),0);
         const count = catTx.length;
         return `<div class="cat-list-item" onclick="showCategoryDetail('${cat}')">
-            <div class="cat-list-icon" style="background:${CAT_BG[cat]};">${CAT_ICON[cat]}</div>
+            <div class="cat-list-icon" style="background:${CAT_BG[cat]};color:${CAT_FG_VAR[cat]};">${catSvg(cat, 22)}</div>
             <div class="cat-list-info">
                 <div class="cat-list-name">${cat}</div>
                 <div class="cat-list-sub">${count} transaction${count!==1?'s':''}</div>
@@ -1753,8 +1827,8 @@ function showCategoryDetail(catName) {
     <!-- Header card -->
     <div class="card" style="background:${CAT_GRAD[catName]};">
         <div class="card-body">
-            <div style="font-size:2rem;margin-bottom:0.5rem;">${CAT_ICON[catName]}</div>
-            <h2 style="font-size:1.375rem;font-weight:700;letter-spacing:-0.02em;">${catName}</h2>
+            <div style="color:${CAT_FG_VAR[catName]};margin-bottom:0.5rem;display:inline-flex;">${catSvg(catName, 32)}</div>
+            <h2 style="font-family:var(--font-display);font-size:1.875rem;font-weight:400;letter-spacing:-0.02em;color:${CAT_FG_VAR[catName]};">${catName}</h2>
         </div>
     </div>
     <!-- KPIs -->
@@ -1886,16 +1960,21 @@ function renderKpiGrid(values) {
     const grid=document.getElementById('kpiGrid');
     const active=KPI_DEFS.filter(k=>visibleKpis[k.id]);
     if (!active.length) { grid.innerHTML='<div style="grid-column:1/-1;padding:1.5rem;text-align:center;color:var(--muted);font-size:0.875rem;">No KPI cards enabled — open ⚙️ Settings to add some.</div>'; return; }
-    grid.innerHTML=active.map(k=>{
+    // Primaries render first (they read as "headline numbers"), then secondaries
+    const primaries  = active.filter(k => k.primary);
+    const secondaries = active.filter(k => !k.primary);
+    const ordered = [...primaries, ...secondaries];
+    grid.innerHTML=ordered.map(k=>{
         const v=values[k.id]; if(!v) return '';
         let cc=k.colorClass;
         if (k.id==='remainingBudget') cc=v.raw>=0?'remain-pos':'remain-neg';
+        const primaryCls = k.primary ? ' primary' : '';
         let prog='';
         if (k.id==='totalDiscretionary'&&budgetTargets['Discretionary']) prog=progressBarHTML(v.raw,budgetTargets['Discretionary']);
         if (k.id==='totalSavings'&&budgetTargets['Savings'])             prog=progressBarHTML(v.raw,budgetTargets['Savings']);
         if (k.id==='totalInvestments'&&budgetTargets['Investments'])     prog=progressBarHTML(v.raw,budgetTargets['Investments']);
         if (k.id==='fixedExpenses'&&(budgetTargets['Bill']||budgetTargets['Loan'])) prog=progressBarHTML(v.raw,(budgetTargets['Bill']||0)+(budgetTargets['Loan']||0));
-        return `<div class="kpi-card ${cc}">
+        return `<div class="kpi-card ${cc}${primaryCls}">
             <div class="kpi-label">${k.label}</div>
             <div class="kpi-value" style="${k.id==='remainingBudget'?'color:'+(v.raw>=0?'var(--income)':'var(--bill)'):''}">
                 ${v.display}
@@ -2685,7 +2764,7 @@ function renderImportRows() {
     document.getElementById('importProgress').textContent = `${active} of ${importRows.length} selected`;
 
     const cats = ['Income','Bill','Loan','Savings','Discretionary','Pension','Investments'];
-    const catOptions = cats.map(c => `<option value="${c}">${CAT_ICON[c]} ${c}</option>`).join('');
+    const catOptions = cats.map(c => `<option value="${c}">${c}</option>`).join('');
 
     body.innerHTML = importRows.map(r => {
         const confClass = r.confidence >= 0.7 ? 'conf-high' : r.confidence >= 0.4 ? 'conf-medium' : 'conf-low';
@@ -2706,7 +2785,7 @@ function renderImportRows() {
             </div>
             <div class="import-row-controls">
                 <select class="field-input" onchange="updateImportCat(${r.id},this.value)" style="height:38px;font-size:0.8125rem;" ${r.skipped?'disabled':''}>
-                    ${cats.map(c=>`<option value="${c}" ${c===r.category?'selected':''}>${CAT_ICON[c]} ${c}</option>`).join('')}
+                    ${cats.map(c=>`<option value="${c}" ${c===r.category?'selected':''}>${c}</option>`).join('')}
                 </select>
                 <input type="text" class="field-input" placeholder="Sub-category (optional)"
                     value="${escapeHtml(r.subcat||'')}" oninput="updateImportSubcat(${r.id},this.value)"
@@ -3000,7 +3079,7 @@ function renderWeeklySummary() {
 
     container.innerHTML = `<div class="card">
         <div class="card-header">
-            <h2>📅 Weekly Discretionary</h2>
+            <h2>Weekly Discretionary</h2>
             <span style="font-size:0.75rem;color:var(--muted);">Last 5 weeks</span>
         </div>
         <div>${rows.join('')}</div>
@@ -3073,7 +3152,7 @@ function renderWeeklySummary() {
             if (document.getElementById('updateBanner')) return;
             const b=document.createElement('div');
             b.id='iosInstallBanner';
-            b.style.cssText='position:fixed;bottom:72px;left:50%;transform:translateX(-50%);background:var(--accent-hover);color:#fff;padding:0.875rem 1.125rem;border-radius:0.875rem;box-shadow:0 8px 24px rgba(0,0,0,0.2);z-index:300;font-family:DM Sans,sans-serif;font-size:0.8125rem;max-width:calc(100vw - 2rem);text-align:center;line-height:1.5;';
+            b.style.cssText='position:fixed;bottom:72px;left:50%;transform:translateX(-50%);background:var(--accent-hover);color:#fff;padding:0.875rem 1.125rem;border-radius:0.875rem;box-shadow:0 8px 24px rgba(0,0,0,0.2);z-index:300;font-family:Geist,DM Sans,sans-serif;font-size:0.8125rem;max-width:calc(100vw - 2rem);text-align:center;line-height:1.5;';
             b.innerHTML=`<div style="font-weight:700;margin-bottom:0.375rem;">📲 Add to Home Screen</div><div style="opacity:0.9;">Tap <strong>Share</strong> ⎙ then <strong>"Add to Home Screen"</strong></div><button onclick="localStorage.setItem('iosBannerDismissed','1');this.parentNode.remove()" style="margin-top:0.625rem;background:rgba(255,255,255,0.2);border:none;color:#fff;border-radius:0.5rem;padding:0.375rem 1rem;cursor:pointer;font-size:0.8rem;">Got it</button>`;
             document.body.appendChild(b);
         }, 2000);
@@ -3092,7 +3171,7 @@ function showUpdateBanner(newVersion) {
         position:fixed; bottom:72px; left:50%; transform:translateX(-50%);
         background:var(--accent-hover); color:#fff; border-radius:0.875rem;
         box-shadow:0 8px 24px rgba(0,0,0,0.2); z-index:300;
-        font-family:'DM Sans',sans-serif; font-size:0.875rem;
+        font-family:'Geist','DM Sans',sans-serif; font-size:0.875rem;
         max-width:calc(100vw - 2rem); display:flex; align-items:center;
         gap:0.75rem; padding:0.75rem 1rem; white-space:nowrap;
     `;
