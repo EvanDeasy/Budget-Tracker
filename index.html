@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <!-- ── Version stamp — increment this (e.g. v11, v12) every time you push an update ── -->
-    <meta name="app-version" content="v27">    <!-- ── No-cache headers — tells browsers not to serve a stale cached copy ── -->
+    <meta name="app-version" content="v28">    <!-- ── No-cache headers — tells browsers not to serve a stale cached copy ── -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -465,6 +465,33 @@ textarea.field-input { height: auto; padding: 0.75rem 0.875rem; resize: none; li
 .kpi-size-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .kpi-pref-row.disabled .kpi-size-picker, .kpi-pref-row.disabled .kpi-drag-handle { opacity: 0.4; pointer-events: none; }
 
+/* ── Chart slicers — chip strips below card headers ── */
+.chart-slicers { display: flex; flex-wrap: wrap; gap: 0.5rem; padding: 0 1.25rem 0.75rem; align-items: center; }
+.chart-slicer-group { display: inline-flex; align-items: center; gap: 0.375rem; }
+.chart-slicer-group + .chart-slicer-group { margin-left: 0.5rem; padding-left: 0.5rem; border-left: 1px solid var(--border); }
+.chart-slicer-label { font-size: 0.6875rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; margin-right: 0.125rem; }
+.chip {
+    display: inline-flex; align-items: center; gap: 0.25rem;
+    padding: 0.3125rem 0.625rem; border-radius: 999px;
+    border: 1px solid var(--border); background: var(--surface);
+    font-family: var(--font-body); font-size: 0.75rem; font-weight: 500;
+    color: var(--muted); cursor: pointer; transition: all 0.15s;
+    white-space: nowrap; line-height: 1;
+}
+.chip:hover { color: var(--text); border-color: var(--accent); }
+.chip.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.chip.muted { opacity: 0.55; }
+.chip.muted:hover { opacity: 1; }
+.chip-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+/* Breadcrumb-style drillback for breakdown */
+.drill-back {
+    display: inline-flex; align-items: center; gap: 0.25rem;
+    font-size: 0.75rem; color: var(--accent); cursor: pointer;
+    background: none; border: none; padding: 0.25rem 0;
+}
+.drill-back:hover { text-decoration: underline; }
+
 /* ── Target input ── */
 .target-input { width:110px; height:40px; padding:0 0.75rem; border:1.5px solid var(--border); border-radius:0.5rem; font-family:var(--font-mono); font-size:0.9rem; background:var(--surface); color:var(--text); text-align:right; font-variant-numeric: tabular-nums; }
 .target-input:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(37,99,235,0.1); }
@@ -607,32 +634,57 @@ textarea.field-input { height: auto; padding: 0.75rem 0.875rem; resize: none; li
             <div class="card-header">
                 <h2>Daily Spending</h2>
             </div>
-            <div class="card-body" style="padding-top:0.875rem;">
+            <div id="dailySlicers" class="chart-slicers"></div>
+            <div class="card-body" style="padding-top:0;">
                 <div style="height:200px;"><canvas id="dailyChart"></canvas></div>
             </div>
         </div>
+
         <div class="card">
             <div class="card-header">
-                <h2>Breakdown</h2>
+                <h2>Period Burndown</h2>
+            </div>
+            <div id="burndownSlicers" class="chart-slicers"></div>
+            <div class="card-body" style="padding-top:0;">
+                <div style="height:200px;"><canvas id="burndownChart"></canvas></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2 id="breakdownTitle">Breakdown</h2>
                 <div style="display:flex;background:var(--bg);border-radius:0.5rem;padding:2px;gap:2px;">
                     <button id="btnCategory" onclick="switchChartView('category')" class="btn btn-sm" style="height:32px;background:var(--accent);color:#fff;">Category</button>
                     <button id="btnDescription" onclick="switchChartView('description')" class="btn btn-sm" style="height:32px;background:none;color:var(--muted);border:none;">Description</button>
                 </div>
             </div>
-            <div class="card-body" style="padding-top:0.875rem;">
+            <div id="breakdownSlicers" class="chart-slicers"></div>
+            <div class="card-body" style="padding-top:0;">
                 <div style="height:200px;"><canvas id="categoryChart"></canvas></div>
             </div>
         </div>
+
         <div class="card">
             <div class="card-header"><h2>Monthly Comparison</h2></div>
-            <div class="card-body" style="padding-top:0.875rem;">
-                <div style="height:200px;"><canvas id="monthlyChart"></canvas></div>
+            <div id="monthlySlicers" class="chart-slicers"></div>
+            <div class="card-body" style="padding-top:0;">
+                <div style="height:240px;"><canvas id="monthlyChart"></canvas></div>
             </div>
         </div>
+
         <div class="card">
-            <div class="card-header"><h2>Top 10 Discretionary</h2></div>
-            <div class="card-body" style="padding-top:0.875rem;">
-                <div style="height:220px;"><canvas id="topDiscretionaryChart"></canvas></div>
+            <div class="card-header"><h2>Cashflow Trend</h2></div>
+            <div id="cashflowSlicers" class="chart-slicers"></div>
+            <div class="card-body" style="padding-top:0;">
+                <div style="height:240px;"><canvas id="cashflowChart"></canvas></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header"><h2 id="topNTitle">Top 10 Discretionary</h2></div>
+            <div id="topNSlicers" class="chart-slicers"></div>
+            <div class="card-body" style="padding-top:0;">
+                <div style="height:280px;"><canvas id="topDiscretionaryChart"></canvas></div>
             </div>
         </div>
     </div>
@@ -941,7 +993,7 @@ textarea.field-input { height: auto; padding: 0.75rem 0.875rem; resize: none; li
 
 <script>
 // ── Version — must match the <meta name="app-version"> tag above ──
-const APP_VERSION = 'v27';
+const APP_VERSION = 'v28';
 
 // ── Local date helper — avoids UTC offset shifting date by a day ──
 const localDateStr = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -992,10 +1044,20 @@ let quickAddTemplates = [];
 let budgetTargets    = {};
 let openingBalances  = {};
 let darkMode         = false;
-let charts           = { daily:null, category:null, monthly:null, topDiscretionary:null };
+let charts           = { daily:null, category:null, monthly:null, topDiscretionary:null, burndown:null, cashflow:null };
 let visibleKpis      = {};
 let kpiOrder         = [];      // Array of KPI ids in display order — user-controlled
 let kpiSizes         = {};      // { id: 'sm' | 'md' | 'lg' } — user-controlled per card
+
+// Per-chart slicer preferences, persisted as one blob
+let chartPrefs = {
+    daily:     { category: 'All', stacked: false },           // 'All' or one of the categories
+    breakdown: { drillCategory: null },                        // null = top-level, else category name
+    monthly:   { range: 6, hidden: {} },                       // months back; hidden category set
+    topN:      { category: 'Discretionary', n: 10 },          // 'All' | category | N
+    burndown:  { compareLast: false },                         // overlay last period's cumulative
+    cashflow:  { range: 12, includePension: false },          // months back
+};
 
 // ── KPI definitions ──
 const KPI_DEFS = [
@@ -1355,6 +1417,21 @@ function initKpiSizes() {
 
 function saveKpiOrder() { localStorage.setItem('budgetKpiOrder', JSON.stringify(kpiOrder)); }
 function saveKpiSizes() { localStorage.setItem('budgetKpiSizes', JSON.stringify(kpiSizes)); }
+
+function initChartPrefs() {
+    const saved = localStorage.getItem('budgetChartPrefs');
+    if (saved) {
+        try {
+            const parsed = JSON.parse(saved);
+            // Deep-merge — keeps default keys for any chart prefs that didn't exist
+            // when the user last saved (e.g. they're on an older app version).
+            Object.keys(parsed).forEach(k => {
+                if (chartPrefs[k]) chartPrefs[k] = { ...chartPrefs[k], ...parsed[k] };
+            });
+        } catch {}
+    }
+}
+function saveChartPrefs() { localStorage.setItem('budgetChartPrefs', JSON.stringify(chartPrefs)); }
 
 // ── Budget targets ──
 function saveTargets() {
@@ -1996,6 +2073,7 @@ function renderAll() {
     // see a consistent snapshot.
     const filtered = getFilteredTransactions();
     updateKPIs(filtered);
+    renderChartSlicers();
     updateCharts(filtered);
     detectRecurring();
     buildMonthStrip();
@@ -2004,6 +2082,15 @@ function renderAll() {
     if (currentTab==='history')    renderHistoryList(filtered);
     if (currentTab==='categories') currentCatDetail ? showCategoryDetail(currentCatDetail) : renderCategoryList(filtered);
     if (currentTab==='add')        renderQuickAdd();
+}
+
+function renderChartSlicers() {
+    renderDailySlicers();
+    renderBurndownSlicers();
+    renderBreakdownSlicers();
+    renderMonthlySlicers();
+    renderCashflowSlicers();
+    renderTopNSlicers();
 }
 
 // ══════════════════════════════════════════════════
@@ -2134,148 +2221,606 @@ function renderAlerts(kpis) {
 function updateCharts(filtered) {
     if (!filtered) filtered = getFilteredTransactions();
     updateDailyChart(filtered);
+    updateBurndownChart();          // independent of "filtered" — always shows current pay period
     updateCategoryChart(filtered);
-    updateMonthlyChart(filtered);
+    updateMonthlyChart();           // independent of "filtered" — uses its own range
+    updateCashflowChart();          // independent of "filtered" — uses its own range
     updateTopDiscretionaryChart(filtered);
 }
 
+// ──────────────────────────────────────────────────
+// SLICER HELPERS
+// Each chart's slicer container gets rebuilt every render. A single
+// click-delegated handler at the document root reads `data-` attributes
+// to dispatch — keeps the markup-and-handler relationship clear.
+// ──────────────────────────────────────────────────
+const SPEND_CATS = ['Bill','Loan','Savings','Discretionary','Investments','Pension'];
+
+function chip(active, label, dataAttrs, opts={}) {
+    const attrs = Object.entries(dataAttrs).map(([k,v]) => `data-${k}="${escapeHtml(String(v))}"`).join(' ');
+    const dot = opts.dotColor ? `<span class="chip-dot" style="background:${opts.dotColor};"></span>` : '';
+    const muted = opts.muted ? ' muted' : '';
+    return `<button class="chip${active?' active':''}${muted}" ${attrs}>${dot}${escapeHtml(label)}</button>`;
+}
+
+function renderDailySlicers() {
+    const el = document.getElementById('dailySlicers');
+    const pref = chartPrefs.daily;
+    const cats = ['All', ...SPEND_CATS];
+    const stackBtn = pref.category === 'All'
+        ? chip(pref.stacked, 'Stacked', { slicer:'daily-stack' })
+        : '';
+    el.innerHTML = `
+        <div class="chart-slicer-group">
+            ${cats.map(c => chip(pref.category===c, c, { slicer:'daily-cat', value:c })).join('')}
+        </div>
+        ${stackBtn ? `<div class="chart-slicer-group">${stackBtn}</div>` : ''}
+    `;
+}
+
+function renderBreakdownSlicers() {
+    const el = document.getElementById('breakdownSlicers');
+    const pref = chartPrefs.breakdown;
+    if (pref.drillCategory) {
+        // Show breadcrumb + back chip
+        el.innerHTML = `
+            <button class="drill-back" data-slicer="breakdown-back">← All categories</button>
+            <span style="color:var(--muted);font-size:0.75rem;">/ ${escapeHtml(pref.drillCategory)}</span>
+        `;
+    } else {
+        el.innerHTML = `
+            <span class="chart-slicer-label">Drill into</span>
+            <div class="chart-slicer-group">
+                ${SPEND_CATS.map(c => chip(false, c, { slicer:'breakdown-drill', value:c })).join('')}
+            </div>
+        `;
+    }
+}
+
+function renderMonthlySlicers() {
+    const el = document.getElementById('monthlySlicers');
+    const pref = chartPrefs.monthly;
+    const ranges = [{n:6,label:'6m'}, {n:12,label:'12m'}, {n:24,label:'24m'}, {n:0,label:'All'}];
+    const cats = ['Income', ...SPEND_CATS];
+    const catColors = { Income:'rgba(22,163,74,0.7)', Bill:'rgba(220,38,38,0.7)', Loan:'rgba(234,88,12,0.7)', Savings:'rgba(37,99,235,0.7)', Discretionary:'rgba(124,58,237,0.7)', Pension:'rgba(67,56,202,0.7)', Investments:'rgba(13,148,136,0.7)' };
+    el.innerHTML = `
+        <div class="chart-slicer-group">
+            ${ranges.map(r => chip(pref.range===r.n, r.label, { slicer:'monthly-range', value:r.n })).join('')}
+        </div>
+        <div class="chart-slicer-group">
+            ${cats.map(c => chip(!pref.hidden[c], c, { slicer:'monthly-toggle', value:c }, { dotColor:catColors[c], muted: !!pref.hidden[c] })).join('')}
+        </div>
+    `;
+}
+
+function renderTopNSlicers() {
+    const el = document.getElementById('topNSlicers');
+    const pref = chartPrefs.topN;
+    const cats = ['Discretionary','Bill','Loan','All'];
+    const ns = [5, 10, 20];
+    el.innerHTML = `
+        <div class="chart-slicer-group">
+            ${cats.map(c => chip(pref.category===c, c==='All'?'All Spending':c, { slicer:'topn-cat', value:c })).join('')}
+        </div>
+        <div class="chart-slicer-group">
+            ${ns.map(n => chip(pref.n===n, 'Top '+n, { slicer:'topn-n', value:n })).join('')}
+        </div>
+    `;
+    // Update card title
+    const t = document.getElementById('topNTitle');
+    if (t) t.textContent = `Top ${pref.n} ${pref.category === 'All' ? 'Spending' : pref.category}`;
+}
+
+function renderBurndownSlicers() {
+    const el = document.getElementById('burndownSlicers');
+    const pref = chartPrefs.burndown;
+    el.innerHTML = `
+        <div class="chart-slicer-group">
+            ${chip(pref.compareLast, 'Compare last period', { slicer:'burndown-compare' })}
+        </div>
+    `;
+}
+
+function renderCashflowSlicers() {
+    const el = document.getElementById('cashflowSlicers');
+    const pref = chartPrefs.cashflow;
+    const ranges = [{n:6,label:'6m'}, {n:12,label:'12m'}, {n:24,label:'24m'}, {n:0,label:'All'}];
+    el.innerHTML = `
+        <div class="chart-slicer-group">
+            ${ranges.map(r => chip(pref.range===r.n, r.label, { slicer:'cashflow-range', value:r.n })).join('')}
+        </div>
+        <div class="chart-slicer-group">
+            ${chip(pref.includePension, 'Include pension', { slicer:'cashflow-pension' })}
+        </div>
+    `;
+}
+
+// One delegated click handler for ALL chart slicers — wired once on bootstrap
+function wireChartSlicers() {
+    document.addEventListener('click', e => {
+        const btn = e.target.closest('[data-slicer]');
+        if (!btn) return;
+        const kind = btn.dataset.slicer;
+        const value = btn.dataset.value;
+
+        switch (kind) {
+            case 'daily-cat':
+                chartPrefs.daily.category = value;
+                if (value !== 'All') chartPrefs.daily.stacked = false;
+                break;
+            case 'daily-stack':
+                chartPrefs.daily.stacked = !chartPrefs.daily.stacked;
+                break;
+            case 'breakdown-drill':
+                chartPrefs.breakdown.drillCategory = value;
+                break;
+            case 'breakdown-back':
+                chartPrefs.breakdown.drillCategory = null;
+                break;
+            case 'monthly-range':
+                chartPrefs.monthly.range = parseInt(value, 10);
+                break;
+            case 'monthly-toggle':
+                chartPrefs.monthly.hidden[value] = !chartPrefs.monthly.hidden[value];
+                break;
+            case 'topn-cat':
+                chartPrefs.topN.category = value;
+                break;
+            case 'topn-n':
+                chartPrefs.topN.n = parseInt(value, 10);
+                break;
+            case 'burndown-compare':
+                chartPrefs.burndown.compareLast = !chartPrefs.burndown.compareLast;
+                break;
+            case 'cashflow-range':
+                chartPrefs.cashflow.range = parseInt(value, 10);
+                break;
+            case 'cashflow-pension':
+                chartPrefs.cashflow.includePension = !chartPrefs.cashflow.includePension;
+                break;
+            default: return;
+        }
+        saveChartPrefs();
+        // Re-render the affected slicer + chart. Simplest: re-render everything.
+        updateCharts();
+        // Re-render slicers
+        renderDailySlicers(); renderBreakdownSlicers(); renderMonthlySlicers();
+        renderTopNSlicers(); renderBurndownSlicers(); renderCashflowSlicers();
+    });
+}
+
+// ──────────────────────────────────────────────────
+// DAILY CHART — slicer-aware (single category or stacked-by-category)
+// ──────────────────────────────────────────────────
 function updateDailyChart(filtered) {
     if (!filtered) filtered = getFilteredTransactions();
-    const expenses = filtered.filter(t=>t.category!=='Income'&&t.category!=='Pension');
-    const daily={}; expenses.forEach(t=>{daily[t.date]=(daily[t.date]||0)+Math.abs(t.amount);});
-    const dates=Object.keys(daily).sort();
-    const labels=dates.map(d=>new Date(d).toLocaleDateString('en-IE',{month:'short',day:'numeric'}));
-    const data=dates.map(d=>daily[d]), maxVal=data.length?Math.max(...data):100;
+    const pref = chartPrefs.daily;
+    const expenses = filtered.filter(t => t.category !== 'Income' && t.category !== 'Pension');
+    const scoped = pref.category === 'All' ? expenses : expenses.filter(t => t.category === pref.category);
 
-    if (charts.daily) {
+    // Aggregate per-day, optionally per-category for stacked mode
+    const byDay = {};
+    scoped.forEach(t => {
+        if (!byDay[t.date]) byDay[t.date] = {};
+        byDay[t.date][t.category] = (byDay[t.date][t.category] || 0) + Math.abs(t.amount);
+    });
+    const dates = Object.keys(byDay).sort();
+    const labels = dates.map(d => new Date(d).toLocaleDateString('en-IE',{month:'short',day:'numeric'}));
+
+    let datasets;
+    const stacked = pref.category === 'All' && pref.stacked;
+    if (stacked) {
+        datasets = SPEND_CATS.map(c => ({
+            label: c,
+            data: dates.map(d => byDay[d][c] || 0),
+            backgroundColor: CHART_COLORS[c] || 'rgba(156,163,175,0.7)',
+            borderRadius: 2,
+            stack: 'spend',
+        })).filter(ds => ds.data.some(v => v > 0));
+    } else if (pref.category === 'All') {
+        datasets = [{
+            label: 'Daily Spending',
+            data: dates.map(d => Object.values(byDay[d]).reduce((s,v)=>s+v,0)),
+            backgroundColor: 'rgba(124,58,237,0.7)',
+            borderRadius: 4,
+        }];
+    } else {
+        datasets = [{
+            label: pref.category,
+            data: dates.map(d => byDay[d][pref.category] || 0),
+            backgroundColor: CHART_COLORS[pref.category] || 'rgba(124,58,237,0.7)',
+            borderRadius: 4,
+        }];
+    }
+
+    const totals = dates.map(d => Object.values(byDay[d]).reduce((s,v)=>s+v,0));
+    const maxVal = totals.length ? Math.max(...totals) : 100;
+
+    // Destroy and rebuild only when stacked mode changed (datasets shape changes); otherwise mutate
+    const targetStacked = stacked;
+    const isStacked = charts.daily?.options?.scales?.x?.stacked;
+    if (charts.daily && isStacked === targetStacked && charts.daily.data.datasets.length === datasets.length) {
         charts.daily.data.labels = labels;
-        charts.daily.data.datasets[0].data = data;
-        charts.daily.options.scales.y.max = maxVal*1.1;
+        datasets.forEach((ds, i) => {
+            charts.daily.data.datasets[i].label = ds.label;
+            charts.daily.data.datasets[i].data = ds.data;
+            charts.daily.data.datasets[i].backgroundColor = ds.backgroundColor;
+        });
+        charts.daily.options.scales.y.max = maxVal * 1.1;
         charts.daily.update();
     } else {
-        charts.daily=new Chart(document.getElementById('dailyChart').getContext('2d'),{
-            type:'bar', data:{labels,datasets:[{label:'Daily Spending',data,backgroundColor:'rgba(124,58,237,0.7)',borderRadius:4}]},
-            options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
-                scales:{x:{ticks:{font:CHART_FONT,maxRotation:45}},y:{beginAtZero:true,max:maxVal*1.1,ticks:{callback:v=>'€'+v.toFixed(0),font:CHART_FONT}}}}
+        if (charts.daily) { charts.daily.destroy(); charts.daily = null; }
+        charts.daily = new Chart(document.getElementById('dailyChart').getContext('2d'), {
+            type: 'bar',
+            data: { labels, datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: stacked, position: 'bottom', labels: { boxWidth: 10, padding: 6, font: CHART_FONT } },
+                    tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: €${ctx.parsed.y.toFixed(2)}` } }
+                },
+                scales: {
+                    x: { stacked, ticks: { font: CHART_FONT, maxRotation: 45 } },
+                    y: { stacked, beginAtZero: true, max: maxVal*1.1, ticks: { callback: v => '€'+v.toFixed(0), font: CHART_FONT } }
+                }
+            }
         });
     }
 }
 
+// ──────────────────────────────────────────────────
+// BREAKDOWN PIE — supports drillCategory for subcategory view
+// ──────────────────────────────────────────────────
 function updateCategoryChart(filtered) {
     if (!filtered) filtered = getFilteredTransactions();
-    const expenses = filtered.filter(t=>t.category!=='Income'&&t.category!=='Pension');
-    let chartData={},colorPalette=[];
-    if (chartView==='category') {
-        expenses.forEach(t=>{chartData[t.category]=(chartData[t.category]||0)+Math.abs(t.amount);});
-        colorPalette=Object.keys(chartData).map(l=>CHART_COLORS[l]||'rgba(156,163,175,0.7)');
-    } else {
-        expenses.forEach(t=>{const d=t.description||'Unnamed';chartData[d]=(chartData[d]||0)+Math.abs(t.amount);});
-        const step=360/(Object.keys(chartData).length||1);
-        colorPalette=Object.keys(chartData).map((_,i)=>`hsla(${i*step},70%,60%,0.7)`);
-    }
-    const labels=Object.keys(chartData),data=Object.values(chartData);
+    const drill = chartPrefs.breakdown.drillCategory;
+    const expenses = filtered.filter(t => t.category !== 'Income' && t.category !== 'Pension');
+    const titleEl = document.getElementById('breakdownTitle');
 
-    // Build a label→count map so the tooltip can look up counts at draw time
-    // rather than closing over a stale `expenses` from chart construction.
-    const labelCounts = {};
-    if (chartView==='category') {
-        expenses.forEach(t => { labelCounts[t.category] = (labelCounts[t.category]||0) + 1; });
+    let chartData = {}, colorPalette = [];
+
+    if (drill) {
+        // Subcategory drilldown — group by t.subcat (or '(no subcategory)')
+        const scoped = expenses.filter(t => t.category === drill);
+        scoped.forEach(t => {
+            const k = t.subcat || '(unlabelled)';
+            chartData[k] = (chartData[k] || 0) + Math.abs(t.amount);
+        });
+        const step = 360 / (Object.keys(chartData).length || 1);
+        colorPalette = Object.keys(chartData).map((_,i) => `hsla(${i*step},65%,60%,0.75)`);
+        if (titleEl) titleEl.textContent = `${drill} Breakdown`;
+    } else if (chartView === 'category') {
+        expenses.forEach(t => { chartData[t.category] = (chartData[t.category] || 0) + Math.abs(t.amount); });
+        colorPalette = Object.keys(chartData).map(l => CHART_COLORS[l] || 'rgba(156,163,175,0.7)');
+        if (titleEl) titleEl.textContent = 'Breakdown';
     } else {
-        expenses.forEach(t => { const d=t.description||'Unnamed'; labelCounts[d] = (labelCounts[d]||0) + 1; });
+        expenses.forEach(t => { const d = t.description || 'Unnamed'; chartData[d] = (chartData[d] || 0) + Math.abs(t.amount); });
+        const step = 360 / (Object.keys(chartData).length || 1);
+        colorPalette = Object.keys(chartData).map((_,i) => `hsla(${i*step},70%,60%,0.7)`);
+        if (titleEl) titleEl.textContent = 'Breakdown';
+    }
+
+    const labels = Object.keys(chartData), data = Object.values(chartData);
+
+    // Tooltip needs counts — keep as instance property so it survives updates
+    const labelCounts = {};
+    if (drill) {
+        expenses.filter(t => t.category === drill).forEach(t => {
+            const k = t.subcat || '(unlabelled)';
+            labelCounts[k] = (labelCounts[k] || 0) + 1;
+        });
+    } else if (chartView === 'category') {
+        expenses.forEach(t => { labelCounts[t.category] = (labelCounts[t.category] || 0) + 1; });
+    } else {
+        expenses.forEach(t => { const d = t.description || 'Unnamed'; labelCounts[d] = (labelCounts[d] || 0) + 1; });
     }
 
     if (charts.category) {
         charts.category.data.labels = labels;
         charts.category.data.datasets[0].data = data;
         charts.category.data.datasets[0].backgroundColor = colorPalette;
-        // Refresh the count-lookup the tooltip closure references
         charts.category.$labelCounts = labelCounts;
         charts.category.update();
     } else {
-        charts.category=new Chart(document.getElementById('categoryChart').getContext('2d'),{
-            type:'pie', data:{labels,datasets:[{data,backgroundColor:colorPalette}]},
-            options:{responsive:true,maintainAspectRatio:false,
-                plugins:{legend:{position:'bottom',labels:{boxWidth:12,padding:8,font:CHART_FONT}},
-                    tooltip:{callbacks:{
-                        label:ctx=>{const v=ctx.parsed,tot=ctx.dataset.data.reduce((a,b)=>a+b,0);return `€${v.toFixed(2)} (${((v/tot)*100).toFixed(1)}%)`;},
-                        afterLabel:ctx=>{
-                            // Read from the chart instance, so updates are reflected
-                            const counts = ctx.chart.$labelCounts || {};
-                            const count = counts[ctx.label] || 0;
-                            return `${count} transaction${count!==1?'s':''}`;
-                        }
-                    }}}}
+        charts.category = new Chart(document.getElementById('categoryChart').getContext('2d'), {
+            type: 'pie',
+            data: { labels, datasets: [{ data, backgroundColor: colorPalette }] },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { boxWidth: 12, padding: 8, font: CHART_FONT } },
+                    tooltip: { callbacks: {
+                        label: ctx => { const v=ctx.parsed, tot=ctx.dataset.data.reduce((a,b)=>a+b,0); return `€${v.toFixed(2)} (${((v/tot)*100).toFixed(1)}%)`; },
+                        afterLabel: ctx => { const counts = ctx.chart.$labelCounts || {}; const c = counts[ctx.label] || 0; return `${c} transaction${c!==1?'s':''}`; }
+                    } }
+                }
+            }
         });
         charts.category.$labelCounts = labelCounts;
     }
 }
 
-function updateMonthlyChart(filtered) {
-    if (!filtered) filtered = getFilteredTransactions();
-    const monthly={};
-    filtered.filter(t=>t.category!=='Pension').forEach(t=>{
-        const m=t.date.substring(0,7);
-        if(!monthly[m]) monthly[m]={Income:0,Bill:0,Loan:0,Savings:0,Discretionary:0,Investments:0};
-        monthly[m][t.category]=(monthly[m][t.category]||0)+Math.abs(t.amount);
+// ──────────────────────────────────────────────────
+// MONTHLY COMPARISON — uses chartPrefs.monthly.{range, hidden}, ignores global filter
+// ──────────────────────────────────────────────────
+function updateMonthlyChart() {
+    const pref = chartPrefs.monthly;
+    const monthly = {};
+    transactions.forEach(t => {
+        const m = t.date.substring(0, 7);
+        if (!monthly[m]) monthly[m] = { Income:0, Bill:0, Loan:0, Savings:0, Discretionary:0, Pension:0, Investments:0 };
+        monthly[m][t.category] = (monthly[m][t.category] || 0) + Math.abs(t.amount);
     });
-    const months=Object.keys(monthly).sort().slice(-6);
-    const labels=months.map(m=>new Date(m+'-01').toLocaleDateString('en-IE',{month:'short',year:'numeric'}));
-    const seriesData = {
-        Income:        months.map(m=>monthly[m].Income||0),
-        Bill:          months.map(m=>monthly[m].Bill||0),
-        Loan:          months.map(m=>monthly[m].Loan||0),
-        Savings:       months.map(m=>monthly[m].Savings||0),
-        Discretionary: months.map(m=>monthly[m].Discretionary||0),
-        Investments:   months.map(m=>monthly[m].Investments||0),
-    };
-    const maxVal = Math.max(...Object.values(seriesData).flat(), 0);
+    let months = Object.keys(monthly).sort();
+    if (pref.range > 0) months = months.slice(-pref.range);
+    const labels = months.map(m => new Date(m+'-01').toLocaleDateString('en-IE', { month:'short', year:'numeric' }));
 
-    if (charts.monthly) {
+    const order = ['Income','Bill','Loan','Savings','Discretionary','Pension','Investments'];
+    const allDatasets = order.map(k => ({
+        label: k === 'Bill' ? 'Bills' : k === 'Loan' ? 'Loans' : k,
+        key: k,
+        data: months.map(m => monthly[m][k] || 0),
+        backgroundColor: CHART_COLORS[k] || (k==='Pension' ? 'rgba(67,56,202,0.7)' : 'rgba(156,163,175,0.7)'),
+    }));
+    const datasets = allDatasets.filter(ds => !pref.hidden[ds.key]);
+    const maxVal = Math.max(...datasets.flatMap(d => d.data), 0);
+
+    if (charts.monthly && charts.monthly.data.datasets.length === datasets.length) {
         charts.monthly.data.labels = labels;
-        // Datasets are in a stable order — update by index
-        const order = ['Income','Bill','Loan','Savings','Discretionary','Investments'];
-        order.forEach((k, i) => { charts.monthly.data.datasets[i].data = seriesData[k]; });
-        charts.monthly.options.scales.y.max = maxVal*1.1;
+        datasets.forEach((ds, i) => {
+            charts.monthly.data.datasets[i].label = ds.label;
+            charts.monthly.data.datasets[i].data = ds.data;
+            charts.monthly.data.datasets[i].backgroundColor = ds.backgroundColor;
+        });
+        charts.monthly.options.scales.y.max = maxVal * 1.1;
         charts.monthly.update();
     } else {
-        const datasets = [
-            {label:'Income',       data:seriesData.Income,        backgroundColor:CHART_COLORS.Income},
-            {label:'Bills',        data:seriesData.Bill,          backgroundColor:CHART_COLORS.Bill},
-            {label:'Loans',        data:seriesData.Loan,          backgroundColor:CHART_COLORS.Loan},
-            {label:'Savings',      data:seriesData.Savings,       backgroundColor:CHART_COLORS.Savings},
-            {label:'Discretionary',data:seriesData.Discretionary, backgroundColor:CHART_COLORS.Discretionary},
-            {label:'Investments',  data:seriesData.Investments,   backgroundColor:CHART_COLORS.Investments},
-        ];
-        charts.monthly=new Chart(document.getElementById('monthlyChart').getContext('2d'),{
-            type:'bar', data:{labels,datasets},
-            options:{responsive:true,maintainAspectRatio:false,
-                plugins:{legend:{position:'bottom',labels:{boxWidth:10,padding:6,font:CHART_FONT}}},
-                scales:{x:{ticks:{font:CHART_FONT}},y:{beginAtZero:true,max:maxVal*1.1,ticks:{callback:v=>'€'+v.toFixed(0),font:CHART_FONT}}}}
+        if (charts.monthly) { charts.monthly.destroy(); charts.monthly = null; }
+        charts.monthly = new Chart(document.getElementById('monthlyChart').getContext('2d'), {
+            type: 'bar',
+            data: { labels, datasets: datasets.map(({key, ...d}) => d) },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { ticks: { font: CHART_FONT } },
+                    y: { beginAtZero: true, max: maxVal*1.1, ticks: { callback: v => '€'+v.toFixed(0), font: CHART_FONT } }
+                }
+            }
         });
     }
 }
 
+// ──────────────────────────────────────────────────
+// TOP-N CHART — supports any category, configurable N
+// ──────────────────────────────────────────────────
 function updateTopDiscretionaryChart(filtered) {
     if (!filtered) filtered = getFilteredTransactions();
-    const totals={};
-    filtered.filter(t=>t.category==='Discretionary').forEach(t=>{const d=t.description||'Unnamed';totals[d]=(totals[d]||0)+Math.abs(t.amount);});
-    const sorted=Object.entries(totals).sort((a,b)=>b[1]-a[1]).slice(0,10);
-    const labels=sorted.map(s=>s[0]),data=sorted.map(s=>s[1]),maxVal=data.length?Math.max(...data):100;
-    const colors=['rgba(126,34,206,0.85)','rgba(139,92,246,0.8)','rgba(147,51,234,0.75)','rgba(167,139,250,0.75)','rgba(196,181,253,0.7)','rgba(192,132,252,0.7)','rgba(216,180,254,0.65)','rgba(221,214,254,0.65)','rgba(237,233,254,0.6)','rgba(245,243,255,0.6)'];
+    const pref = chartPrefs.topN;
+    let scoped;
+    if (pref.category === 'All') {
+        scoped = filtered.filter(t => t.category !== 'Income' && t.category !== 'Pension');
+    } else {
+        scoped = filtered.filter(t => t.category === pref.category);
+    }
+    const totals = {};
+    scoped.forEach(t => { const d = t.description || 'Unnamed'; totals[d] = (totals[d] || 0) + Math.abs(t.amount); });
+    const sorted = Object.entries(totals).sort((a,b) => b[1] - a[1]).slice(0, pref.n);
+    const labels = sorted.map(s => s[0]), data = sorted.map(s => s[1]);
+    const maxVal = data.length ? Math.max(...data) : 100;
 
-    if (charts.topDiscretionary) {
+    // Single hue palette derived from the category, deepest at top
+    const baseHue = pref.category === 'All' ? 'rgba(124,58,237,'
+                  : pref.category === 'Bill' ? 'rgba(220,38,38,'
+                  : pref.category === 'Loan' ? 'rgba(234,88,12,'
+                  : 'rgba(124,58,237,';
+    const colors = data.map((_, i) => baseHue + (0.85 - (i / Math.max(data.length, 1)) * 0.45).toFixed(2) + ')');
+
+    if (charts.topDiscretionary && charts.topDiscretionary.data.labels.length === labels.length) {
         charts.topDiscretionary.data.labels = labels;
         charts.topDiscretionary.data.datasets[0].data = data;
-        charts.topDiscretionary.data.datasets[0].backgroundColor = colors.slice(0, data.length);
-        charts.topDiscretionary.options.scales.x.max = maxVal*1.1;
+        charts.topDiscretionary.data.datasets[0].backgroundColor = colors;
+        charts.topDiscretionary.options.scales.x.max = maxVal * 1.1;
         charts.topDiscretionary.update();
     } else {
-        charts.topDiscretionary=new Chart(document.getElementById('topDiscretionaryChart').getContext('2d'),{
-            type:'bar', data:{labels,datasets:[{label:'Total Spent',data,backgroundColor:colors.slice(0,data.length),borderRadius:4}]},
-            options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
-                plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`€${ctx.parsed.x.toFixed(2)}`}}},
-                scales:{x:{beginAtZero:true,max:maxVal*1.1,ticks:{callback:v=>'€'+v.toFixed(0),font:CHART_FONT}},
-                    y:{ticks:{font:CHART_FONT,callback:function(v){const l=this.getLabelForValue(v);return l.length>18?l.substring(0,16)+'…':l;}}}}}
+        if (charts.topDiscretionary) { charts.topDiscretionary.destroy(); charts.topDiscretionary = null; }
+        charts.topDiscretionary = new Chart(document.getElementById('topDiscretionaryChart').getContext('2d'), {
+            type: 'bar',
+            data: { labels, datasets: [{ label: 'Total Spent', data, backgroundColor: colors, borderRadius: 4 }] },
+            options: {
+                indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `€${ctx.parsed.x.toFixed(2)}` } } },
+                scales: {
+                    x: { beginAtZero: true, max: maxVal*1.1, ticks: { callback: v => '€'+v.toFixed(0), font: CHART_FONT } },
+                    y: { ticks: { font: CHART_FONT, callback: function(v){ const l = this.getLabelForValue(v); return l.length > 18 ? l.substring(0, 16) + '…' : l; } } }
+                }
+            }
+        });
+    }
+}
+
+// ──────────────────────────────────────────────────
+// PERIOD BURNDOWN CHART — cumulative discretionary spend through current pay period
+// vs straight-line target. Optional overlay of the previous period for comparison.
+// ──────────────────────────────────────────────────
+function updateBurndownChart() {
+    const pref = chartPrefs.burndown;
+    const target = budgetTargets['Discretionary'];
+    const canvas = document.getElementById('burndownChart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    if (!target) {
+        // Render a flat empty-state — destroy any existing chart
+        if (charts.burndown) { charts.burndown.destroy(); charts.burndown = null; }
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        // Use a placeholder dataset so card layout stays consistent
+        charts.burndown = new Chart(ctx, {
+            type: 'line',
+            data: { labels: ['Set a Discretionary target to enable this chart'], datasets: [{ data: [0] }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: false } }, scales: { x: { ticks: { font: CHART_FONT } }, y: { display: false } } }
+        });
+        return;
+    }
+
+    const { start, end } = getPayPeriod();
+    const msPerDay = 86400000;
+    const totalDays = Math.round((end - start) / msPerDay) + 1;
+    const today = new Date(); today.setHours(0,0,0,0);
+
+    // Build a per-day cumulative for current period
+    const dayTotals = new Array(totalDays).fill(0);
+    const startStr = localDateStr(start);
+    const endStr = localDateStr(end);
+    transactions
+        .filter(t => t.category === 'Discretionary' && t.date >= startStr && t.date <= endStr)
+        .forEach(t => {
+            const d = new Date(t.date); d.setHours(0,0,0,0);
+            const idx = Math.round((d - start) / msPerDay);
+            if (idx >= 0 && idx < totalDays) dayTotals[idx] += Math.abs(t.amount);
+        });
+    const cumulative = [];
+    let running = 0;
+    for (let i = 0; i < totalDays; i++) { running += dayTotals[i]; cumulative.push(running); }
+
+    // Truncate cumulative to today (no future spend)
+    const dayIdxToday = Math.min(totalDays - 1, Math.max(0, Math.round((today - start) / msPerDay)));
+    const cumulativeToToday = cumulative.map((v, i) => i <= dayIdxToday ? v : null);
+
+    // Target straight line from 0 to target across totalDays
+    const targetLine = Array.from({ length: totalDays }, (_, i) => target * ((i + 1) / totalDays));
+
+    const labels = Array.from({ length: totalDays }, (_, i) => {
+        const d = new Date(start); d.setDate(d.getDate() + i);
+        return d.toLocaleDateString('en-IE', { day: 'numeric', month: 'short' });
+    });
+
+    const datasets = [
+        {
+            label: 'Spent', data: cumulativeToToday,
+            borderColor: 'rgba(124,58,237,1)', backgroundColor: 'rgba(124,58,237,0.18)',
+            fill: true, tension: 0.2, pointRadius: 0, borderWidth: 2, spanGaps: false,
+        },
+        {
+            label: 'Target pace', data: targetLine,
+            borderColor: 'rgba(107,114,128,0.8)', borderDash: [4, 4],
+            fill: false, tension: 0, pointRadius: 0, borderWidth: 1.5,
+        }
+    ];
+
+    if (pref.compareLast) {
+        // Compute previous period's cumulative
+        const prevEnd = new Date(start); prevEnd.setDate(prevEnd.getDate() - 1); prevEnd.setHours(0,0,0,0);
+        const prevPeriod = getPayPeriodFor(prevEnd);
+        const prevStartStr = localDateStr(prevPeriod.start);
+        const prevEndStr = localDateStr(prevPeriod.end);
+        const prevTotalDays = Math.round((prevPeriod.end - prevPeriod.start) / msPerDay) + 1;
+        const prevDay = new Array(prevTotalDays).fill(0);
+        transactions
+            .filter(t => t.category === 'Discretionary' && t.date >= prevStartStr && t.date <= prevEndStr)
+            .forEach(t => {
+                const d = new Date(t.date); d.setHours(0,0,0,0);
+                const idx = Math.round((d - prevPeriod.start) / msPerDay);
+                if (idx >= 0 && idx < prevTotalDays) prevDay[idx] += Math.abs(t.amount);
+            });
+        let prevRunning = 0;
+        const prevCumul = prevDay.map(v => (prevRunning += v));
+        // Map onto the current period's day axis (truncate or pad)
+        const aligned = Array.from({ length: totalDays }, (_, i) => i < prevCumul.length ? prevCumul[i] : prevCumul[prevCumul.length - 1]);
+        datasets.push({
+            label: 'Last period', data: aligned,
+            borderColor: 'rgba(180,83,9,0.7)', backgroundColor: 'transparent',
+            fill: false, tension: 0.2, pointRadius: 0, borderWidth: 1.5, borderDash: [2, 3],
+        });
+    }
+
+    const dataMax = Math.max(target, ...cumulative);
+
+    if (charts.burndown && charts.burndown.data.datasets.length === datasets.length) {
+        charts.burndown.data.labels = labels;
+        datasets.forEach((ds, i) => {
+            Object.assign(charts.burndown.data.datasets[i], ds);
+        });
+        charts.burndown.options.scales.y.max = dataMax * 1.1;
+        charts.burndown.update();
+    } else {
+        if (charts.burndown) { charts.burndown.destroy(); charts.burndown = null; }
+        charts.burndown = new Chart(ctx, {
+            type: 'line',
+            data: { labels, datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: true, position: 'bottom', labels: { boxWidth: 10, padding: 6, font: CHART_FONT } },
+                    tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: €${(ctx.parsed.y||0).toFixed(2)}` } }
+                },
+                scales: {
+                    x: { ticks: { font: CHART_FONT, maxRotation: 45, autoSkip: true, maxTicksLimit: 8 } },
+                    y: { beginAtZero: true, max: dataMax*1.1, ticks: { callback: v => '€'+v.toFixed(0), font: CHART_FONT } }
+                },
+                interaction: { mode: 'index', intersect: false }
+            }
+        });
+    }
+}
+
+// ──────────────────────────────────────────────────
+// CASHFLOW TREND — monthly Income, Outgoing, Net
+// ──────────────────────────────────────────────────
+function updateCashflowChart() {
+    const pref = chartPrefs.cashflow;
+    const monthly = {};
+    transactions.forEach(t => {
+        const m = t.date.substring(0, 7);
+        if (!monthly[m]) monthly[m] = { income: 0, out: 0 };
+        if (t.category === 'Income') {
+            monthly[m].income += Math.abs(t.amount);
+        } else if (t.category === 'Pension' && !pref.includePension) {
+            // skip pension when toggle is off
+        } else {
+            monthly[m].out += Math.abs(t.amount);
+        }
+    });
+    let months = Object.keys(monthly).sort();
+    if (pref.range > 0) months = months.slice(-pref.range);
+    const labels = months.map(m => new Date(m+'-01').toLocaleDateString('en-IE', { month:'short', year:'2-digit' }));
+    const income = months.map(m => monthly[m].income);
+    const outgoing = months.map(m => monthly[m].out);
+    const net = months.map(m => monthly[m].income - monthly[m].out);
+
+    const datasets = [
+        { type: 'bar', label: 'Income',   data: income,   backgroundColor: 'rgba(22,163,74,0.65)',  borderRadius: 3, order: 2 },
+        { type: 'bar', label: 'Outgoing', data: outgoing, backgroundColor: 'rgba(212,83,126,0.65)', borderRadius: 3, order: 2 },
+        { type: 'line', label: 'Net',     data: net,
+          borderColor: '#1d4ed8', backgroundColor: '#1d4ed8',
+          borderWidth: 2, pointRadius: 3, tension: 0.25, order: 1, fill: false },
+    ];
+    const ymax = Math.max(...income, ...outgoing, ...net.map(Math.abs), 0);
+    const ymin = Math.min(...net, 0);
+
+    if (charts.cashflow && charts.cashflow.data.datasets.length === datasets.length) {
+        charts.cashflow.data.labels = labels;
+        datasets.forEach((ds, i) => Object.assign(charts.cashflow.data.datasets[i], ds));
+        charts.cashflow.options.scales.y.max = ymax * 1.1;
+        charts.cashflow.options.scales.y.min = ymin < 0 ? ymin * 1.2 : 0;
+        charts.cashflow.update();
+    } else {
+        if (charts.cashflow) { charts.cashflow.destroy(); charts.cashflow = null; }
+        charts.cashflow = new Chart(document.getElementById('cashflowChart').getContext('2d'), {
+            type: 'bar',
+            data: { labels, datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: true, position: 'bottom', labels: { boxWidth: 10, padding: 6, font: CHART_FONT } },
+                    tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: €${ctx.parsed.y.toLocaleString('en-IE',{minimumFractionDigits:2,maximumFractionDigits:2})}` } }
+                },
+                scales: {
+                    x: { ticks: { font: CHART_FONT, autoSkip: false, maxRotation: 45 } },
+                    y: { beginAtZero: true, max: ymax*1.1, min: ymin < 0 ? ymin*1.2 : 0,
+                         ticks: { callback: v => (v < 0 ? '−' : '') + '€' + Math.abs(v).toFixed(0), font: CHART_FONT } }
+                }
+            }
         });
     }
 }
@@ -3261,6 +3806,8 @@ function renderWeeklySummary() {
     initVisibleKpis();
     initKpiOrder();
     initKpiSizes();
+    initChartPrefs();
+    wireChartSlicers();
 
     document.getElementById('transactionCategory').addEventListener('change',()=>{
         if (document.activeElement===document.getElementById('transactionDescription')) showSuggestions();
